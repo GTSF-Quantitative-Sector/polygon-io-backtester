@@ -2,3 +2,19 @@
 This is an extension of a project built with Locke Adams for the GTSF Investments Committee Quantatative Sector. This semster (Fall 2022), the Quant Sector partnered with [Polygon.io](https://polygon.io/) for our data needs. In developing value investing strategies based on data fatched from Polygon, we found that using naive synchronous calls to their REST API or using their provided Python client was far to slow to perform backtests in a reasonable time period. For example, for a 24-month backtest on the S&P 500, with holdings recalculated every month, there would be 500*24 calls to get stock price and 500*8 to get the quarterly financials (assuming proper caching of past calls to the financials API, which proved hard to accomplish). If these calls are run in a synchronous fashion, backtests can take hours to perform, even over this relatively short 24 month window. \
 \
 So, we decided to create a generalizable backtesting framework, which abstracted asynchronous API calls away from the user, and as a result only requiring the user to provide a function which will score a stock based on current quarterly financials, past quarterly financials, and current price (NOTE: these inputs are currently sufficient for our uses, but for any trading strategy that trades on a frequency lower than 1 month this is probably not enough information). In having a constant frame of information provided to the user, this program is able to optimize that same 24-month backtest down to under 1 minute. There are still some shortcomings that must be addressed, for example the universe of equities considered is only the current S&P 500, which would not have been known at the time of the backtest, and right now the framework assumes complete freedom over fractional shares, but all in all this framework does provide a good starting point for intuition about whether the model will be successful.
+## Quick Example
+A new algorithm is definied by extending the Algorithm class and implementing the score method. 
+```
+from backtester import Algorithm, StockFinancial
+
+
+class BasicAlgorithm(Algorithm):
+
+    async def score(self, current_financials: StockFinancial, last_financials: StockFinancial, current_price: float):
+        # rank tickers by current earnings per share
+        return current_financials.financials.income_statement.basic_earnings_per_share.value
+
+if __name__ == "__main__":
+    algo = BasicAlgorithm(verbose=True)
+    print(algo.backtest())
+```
