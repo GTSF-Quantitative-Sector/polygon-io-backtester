@@ -13,7 +13,7 @@ import logging
 from polygon.rest.models.financials import StockFinancial
 from backtester.async_polygon import AsyncPolygon
 
-# TODO: Logging, Caching
+# TODO: Caching
 
 
 class Algorithm:
