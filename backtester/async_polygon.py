@@ -1,30 +1,29 @@
 import aiohttp
 from datetime import date, datetime, timedelta
 import concurrent
-import config
 from typing import Tuple
 
 from polygon.rest.models.financials import StockFinancial
 
-API_KEY = config.KEY
-
 
 class AsyncPolygon:
     """
-        Namespace for static methods that are async wrappers over endpoints of the Polygon.io REST API.
-        This is designed specifically for the use of the GTSF Investments Committee Quantatative Sector 
-        in backtesting value investing strategies, so there are probably a lot of improvements that could be made for a more 
-        generalized use case. (i.e. these wrappers do not have the same functionality of the static endpoints rovided by Polygon.io)
+       Class for interacting with the Polygon.io REST API in an asynchronous fashion
     """
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, timeout: float = 10):
+        """
+            Args:
+                api_key (str): the Polygon.io API key to use
+                timeout (float, optional): default timeout for http requests, defaults to 10 seconds
+        """
         self.api_key = api_key
         self.session = None
+        self.timeout = timeout
 
     async def get_financials(
             self, ticker: str,
-            query_date: str = None,
-            timeout: float = 10) -> Tuple[StockFinancial, StockFinancial]:
+            query_date: str = None) -> Tuple[StockFinancial, StockFinancial]:
         """ Gathers 2 most recent financial filing data for designated ticker
 
         Args:
@@ -33,7 +32,7 @@ class AsyncPolygon:
             query_date (str, optional): Date to query. Defaults to None, 
                 which queries today's date.
         Returns:
-            dict: dictionary containing all available data
+            (StockFinancial, StockFinancial): the most recent financial filing, the previous financial filing
         """
     
         if query_date is None:
@@ -42,7 +41,7 @@ class AsyncPolygon:
         URL = "/vX/reference/financials?sort=filing_date"
         URL += f"&apiKey={self.api_key}&ticker={ticker}&limit=2&period_of_report_date.lte={query_date}"
         try:
-            async with self.session.get(URL, timeout=timeout) as resp:
+            async with self.session.get(URL, timeout=self.timeout) as resp:
                 response = await resp.json()
         except concurrent.futures.TimeoutError:
             raise TimeoutError(f"{ticker}: Timed out while retrieving company financials")
@@ -52,13 +51,22 @@ class AsyncPolygon:
         
         raise ValueError("Failed to retrieve company financials")
 
-    async def get_price(self, ticker: str, query_date: str = None, timeout: float = 10):
+    async def get_price(self, ticker: str, query_date: str = None) -> float:
+        """
+        Get price for a specified ticker on a specified date
+        Args:
+            ticker (str): Ticker symbol of the stock.
+            query_date (str, optional): Date to query. Defaults to None, which queries today's date.
+            timeout (int, optional): time to wait before raising TimeoutError.
+        Returns:
+            float: Price of the stock on the given date.
+        """
         # use a different endpoint for current day and past prices
         if query_date is None or query_date == date.today().strftime("%Y-%m-%d"):
             url = f"/v2/aggs/ticker/{ticker}/prev?adjusted=true&apiKey={self.api_keyapi_key}"
 
             try:
-                async with self.session.get(url, timeout=timeout) as resp:
+                async with self.session.get(url, timeout=self.timeout) as resp:
                     response = await resp.json()
                     return response["results"][0]["c"]
             except concurrent.futures.TimeoutError:
@@ -67,7 +75,7 @@ class AsyncPolygon:
         else:
             url = f"/v1/open-close/{ticker}/{query_date}?adjusted=true&apiKey={self.api_key}"
             try:
-                async with self.session.get(url, timeout=timeout) as resp:
+                async with self.session.get(url, timeout=self.timeout) as resp:
                     response = await resp.json()
             except concurrent.futures.TimeoutError:
                 raise TimeoutError(f"{ticker}: Timed out while retrieving price")
@@ -83,7 +91,7 @@ class AsyncPolygon:
                 query_date = (curr_date - timedelta(days=1)).strftime("%Y-%m-%d")
                 url = f"/v1/open-close/{ticker}/{query_date}?adjusted=true&apiKey={self.api_key}"
                 try:
-                    async with self.session.get(url, timeout=timeout) as resp:
+                    async with self.session.get(url, timeout=self.timeout) as resp:
                         response = await resp.json()
                 except concurrent.futures.TimeoutError:
                     raise TimeoutError(f"{ticker}: Timed out while retrieving price")
