@@ -3,7 +3,7 @@ This is an extension of a project built with Locke Adams for the GTSF Investment
 \
 So, we decided to create a generalizable backtesting framework, which abstracted asynchronous API calls away from the user, and as a result only requiring the user to provide a function which will score a stock based on current quarterly financials, past quarterly financials, and current price (NOTE: these inputs are currently sufficient for our uses, but for any trading strategy that trades on a frequency lower than 1 month this is probably not enough information). In having a constant frame of information provided to the user, this program is able to optimize that same 24-month backtest down to under 1 minute. \
 \
-There are still some shortcomings that must be addressed, for example the universe of equities considered is only the current S&P 500, which would not have been known at the time of the backtest, and right now the framework assumes complete freedom over fractional shares, but all in all this framework does provide a good starting point for intuition about whether the model will be successful.
+There are still some shortcomings that must be addressed, for example the universe of equities considered is only the current S&P 500, which would not have been known at the time of the backtest, and right now the framework assumes complete freedom over fractional shares. All in all, though, this framework does provide a good starting point for intuition about whether the model will be successful.
 
 ## Installation
 To install, clone this repository, then run
