@@ -8,9 +8,14 @@ To install, clone this repository, then run
 ```
 pip install -r requirements.txt
 ```
+Additionally, you must create a `config.py` file in the backtester directory with format 
+
+```
+KEY="API Key here"
+```
 
 ## Quick Example
-A new algorithm is definied by extending the Algorithm class and implementing the score method. The score method takes two StockFinancial objects, defined by the Polygon.io Python client [here](https://github.com/polygon-io/client-python/blob/master/polygon/rest/models/financials.py), to represent the current and last financial statements, and the current price. The method is async, which can be leveraged to optimize the backtest if the user needs to pull in any additional information from other sources
+A new algorithm is definied by extending the Algorithm class and implementing the score method. The score method takes two `StockFinancial` objects, defined by the Polygon.io Python client [here](https://github.com/polygon-io/client-python/blob/master/polygon/rest/models/financials.py), to represent the current and last financial statements, and the current price. The method is async, which can be leveraged to optimize the backtest if the user needs to pull in any additional information from other sources
 ```
 from backtester import Algorithm, StockFinancial
 
