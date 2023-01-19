@@ -1,4 +1,4 @@
-import config
+import backtester.config
 import requests
 import bs4 as bs
 from typing import List, Tuple
@@ -18,7 +18,7 @@ from backtester.async_polygon import AsyncPolygon
 
 class Algorithm:
 
-    API_KEY = config.KEY
+    API_KEY = backtester.config.KEY
 
     def __init__(self, tickers_and_sectors: List[Tuple[str, str]] = None, verbose: bool = False):
         """
