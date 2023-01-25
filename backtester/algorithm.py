@@ -60,7 +60,11 @@ class Algorithm:
         self.logger.debug("Beginning backtest")
         return asyncio.run(self._backtest(months_back, num_stocks))
 
-    async def score(self, current_financials: StockFinancial, last_financials: StockFinancial, current_price: float):
+    async def score(
+            self, 
+            current_financials: StockFinancial,
+            last_financials: StockFinancial,
+            current_price: float) -> float:
         """
             Args:
                 current_financials (StockFinancial): the most recent company financials

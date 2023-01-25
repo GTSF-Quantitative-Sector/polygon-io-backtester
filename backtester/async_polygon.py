@@ -1,7 +1,7 @@
 import aiohttp
 from datetime import date, timedelta
 import concurrent
-from typing import Tuple
+from typing import Tuple, Optional
 
 from polygon.rest.models.financials import StockFinancial
 
@@ -11,7 +11,7 @@ class AsyncPolygon:
        Class for interacting with the Polygon.io REST API in an asynchronous fashion
     """
 
-    def __init__(self, api_key: str, timeout: float = 10):
+    def __init__(self, api_key: str, timeout: Optional[float] = 10):
         """
             Args:
                 api_key (str): the Polygon.io API key to use
@@ -22,8 +22,9 @@ class AsyncPolygon:
         self.timeout = timeout
 
     async def get_financials(
-            self, ticker: str,
-            query_date: date = None) -> Tuple[StockFinancial, StockFinancial]:
+            self,
+            ticker: str,
+            query_date: Optional[date] = None) -> Tuple[StockFinancial, StockFinancial]:
         """ Gathers 2 most recent financial filing data for designated ticker
 
         Args:
@@ -50,10 +51,14 @@ class AsyncPolygon:
 
         if response['status'] == 'OK':
             return StockFinancial.from_dict(response['results'][0]), StockFinancial.from_dict(response['results'][1])
-        
+
         raise ValueError("Failed to retrieve company financials")
 
-    async def get_price(self, ticker: str, query_date: date = None) -> float:
+    async def get_price(
+            self,
+            ticker: str,
+            query_date: Optional[date] = None) -> float:
+
         """
         Get price for a specified ticker on a specified date
         Args:

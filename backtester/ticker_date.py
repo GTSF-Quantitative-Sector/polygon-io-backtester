@@ -3,6 +3,7 @@ from datetime import date
 
 from backtester.async_polygon import AsyncPolygon, StockFinancial
 
+
 class Ticker:
 
     """
