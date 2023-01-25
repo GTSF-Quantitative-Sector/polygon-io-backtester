@@ -79,7 +79,6 @@ class AsyncPolygon:
             except concurrent.futures.TimeoutError:
                 raise TimeoutError(f"{ticker}: Timed out while retrieving price")
         else:
-
             str_query_date = query_date.strftime("%Y-%m-%d")
             url = f"/v1/open-close/{ticker}/{str_query_date}?adjusted=true&apiKey={self.api_key}"
             try:

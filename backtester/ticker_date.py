@@ -30,10 +30,10 @@ class TickerDate:
         Includes price and current/last financials
     """
 
-    client: AsyncPolygon
     query_date: date
     ticker: Ticker
     synced: bool
+    _client: AsyncPolygon
     _current_financials: StockFinancial
     _last_financials: StockFinancial
     _price: float
@@ -52,7 +52,7 @@ class TickerDate:
         self.ticker = ticker
         self.query_date = query_date
         self.synced = False
-        self.client = client
+        self._client = client
 
     async def sync(self):
         """
@@ -60,8 +60,8 @@ class TickerDate:
         """
 
         financials, price = await asyncio.gather(
-            self.client.get_financials(self.ticker.name, self.query_date),
-            self.client.get_price(self.ticker.name, self.query_date),
+            self._client.get_financials(self.ticker.name, self.query_date),
+            self._client.get_price(self.ticker.name, self.query_date),
         )
 
         self._current_financials, self._last_financials = financials

@@ -83,8 +83,8 @@ class Algorithm:
             ticker_dates.append(ticker_date)
             coros.append(ticker_date.sync())
 
-        exceptions = await asyncio.gather(*coros, return_exceptions=True)
         results = []
+        exceptions = await asyncio.gather(*coros, return_exceptions=True)
         for exception, td in zip(exceptions, ticker_dates):
             if exception is None:
                 results.append(td)
@@ -117,6 +117,7 @@ class Algorithm:
         for score, ticker_date in zip(score_results, ticker_dates):
             ticker = ticker_date.ticker.name
             sector = ticker_date.ticker.sector
+            price = ticker_date.price
 
             if isinstance(score, NotImplementedError):
                 raise NotImplementedError("must implement async score(self, current_financials: StockFinancial, last_financials: StockFinancial, current_price: float)")
