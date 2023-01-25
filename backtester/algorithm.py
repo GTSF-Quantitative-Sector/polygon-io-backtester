@@ -52,7 +52,7 @@ class Algorithm:
                 list: percentage of initial capital at each timestep
         """
 
-        # weird quirk needed to windows
+        # weird quirk needed for windows
         if os.name == "nt":
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
