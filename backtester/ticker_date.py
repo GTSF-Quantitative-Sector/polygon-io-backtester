@@ -1,36 +1,66 @@
-from async_polygon import AsyncPolygon, StockFinancial
 import asyncio
 from datetime import date
 
+from backtester.async_polygon import AsyncPolygon, StockFinancial
+
 class Ticker:
+
+    """
+        Hold the name and sector of a ticker in a singular class
+    """
 
     name: str
     sector: str
 
     def __init__(self, name: str, sector: str) -> None:
+        """
+        Args:
+            name (str): ticker name
+            sector (str): sector to classify the ticker in
+        """
         self.name = name
         self.sector = sector
 
+
 class TickerDate:
 
+    """
+        Class to contain information for a ticker on a specific date.
+        Includes price and current/last financials
+    """
+
     client: AsyncPolygon
-    date: str
+    query_date: date
     ticker: Ticker
     synced: bool
     _current_financials: StockFinancial
     _last_financials: StockFinancial
     _price: float
 
-    def __init__(self, ticker: Ticker, date: str, client: AsyncPolygon) -> None:
+    def __init__(self, ticker: Ticker, query_date: date, client: AsyncPolygon) -> None:
+
+        """
+            Args:
+                ticker (Ticker): ticker to pull data for
+                query_date (datetime.date): date for which to pull data
+                client (AsyncPolygon): AsyncPolygon client to use.
+                    Preferrably the same client across all TickerDates 
+                    so multiple client sessions are not open.
+        """
+
         self.ticker = ticker
-        self.date = date
+        self.query_date = query_date
         self.synced = False
         self.client = client
 
     async def sync(self):
+        """
+            Synchronize ticker data (price, current_financials, last_financials) for indicated date
+        """
+
         financials, price = await asyncio.gather(
-            self.client.get_financials(self.ticker.name, self.date),
-            self.client.get_price(self.ticker.name, self.date),
+            self.client.get_financials(self.ticker.name, self.query_date),
+            self.client.get_price(self.ticker.name, self.query_date),
         )
 
         self._current_financials, self._last_financials = financials

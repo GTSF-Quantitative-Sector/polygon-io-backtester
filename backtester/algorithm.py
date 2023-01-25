@@ -1,7 +1,7 @@
 import backtester.config
 import requests
 import bs4 as bs
-from typing import List, Tuple
+from typing import List
 import asyncio
 import pandas as pd
 import os
@@ -12,6 +12,7 @@ import logging
 
 from polygon.rest.models.financials import StockFinancial
 from backtester.async_polygon import AsyncPolygon
+from backtester.ticker_date import Ticker, TickerDate
 
 # TODO: Caching
 
@@ -20,13 +21,13 @@ class Algorithm:
 
     API_KEY = backtester.config.KEY
 
-    def __init__(self, tickers_and_sectors: List[Tuple[str, str]] = None, verbose: bool = False):
+    def __init__(self, tickers: List[Ticker] = None, verbose: bool = False):
         """
             Initialize a new Algorithm base class
 
             Args:
-                tickers_and_sectors (list[tuple[str, str]]): list of tickers along with their sector to evaluate in the backtest.
-                    Defaults to current S&P 500
+                tickers_and_sectors (list[Ticker]): list of Ticker (ticker_date.py) objects containing ticker name and sector.
+                    Universe of tickers to consider in backtest. Defaults to current S&P 500.
         """
         self.logger = logging.getLogger("backtester")
         if verbose:
@@ -34,11 +35,11 @@ class Algorithm:
         else:
             logging.basicConfig(level=logging.CRITICAL)
 
-        if not tickers_and_sectors:
+        if not tickers:
             self.logger.debug("Pulling default universe of tickers: current S&P 500")
-            tickers_and_sectors = self._get_sp500()        
+            tickers = self._get_sp500()        
         
-        self.tickers_and_sectors = tickers_and_sectors
+        self.tickers = tickers
 
     def backtest(self, months_back: int = 12, num_stocks: int = 5) -> list:
         """
@@ -69,59 +70,50 @@ class Algorithm:
 
         raise NotImplementedError("Must implement score(StockFinancial, StockFinancial, float)")
 
-    async def _rank_tickers(self, client: AsyncPolygon, query_date: date) -> pd.DataFrame:
+    async def _get_ticker_dates(self, client: AsyncPolygon, query_date: date) -> List[TickerDate]:
+        coros = []
+        ticker_dates = []
+
+        for ticker in self.tickers:
+            ticker_date = TickerDate(ticker, query_date, client)
+            ticker_dates.append(ticker_date)
+            coros.append(ticker_date.sync())
+
+        exceptions = await asyncio.gather(*coros, return_exceptions=True)
+        results = []
+        for exception, td in zip(exceptions, ticker_dates):
+            if exception is None:
+                results.append(td)
+            else:
+                self.logger.info(f"could not retreive info for {td.ticker.name} on {query_date}")
+
+        return results
+
+    async def _rank_tickers(self, ticker_dates: List[TickerDate]) -> pd.DataFrame:
         """
             Ranks all tickers for a given time period
 
             Args:
-                client (AsyncPolygon): an open Async Polygon connection
-                query_date (datetime.date): date to evaluate for (yyyy-mm-dd)
+                ticker_dates (list(TickerDate)): stock ticker/data objects to rank
+                    (based on score method)
 
             Returns:
-                pd.DataFrame: Dataframe containing stock, sector, and score
+                pd.DataFrame: Dataframe containing stock, sector, and score (sorted)
         """
 
         results = {}
-        tickers = []
-
-        financials_coros = []
-        price_coros = []
-
-        # load the coroutines to get financial data for each stock
-        for ticker, _ in self.tickers_and_sectors:
-            tickers.append(ticker)
-            financials_coros.append(client.get_financials(ticker, query_date))
-
-        # load the coroutines to get price for each stock
-        for ticker, _ in self.tickers_and_sectors:
-            price_coros.append(client.get_price(ticker, query_date))
-
-        # run coroutines
-        financials_results = await asyncio.gather(*financials_coros, return_exceptions=True)
-        price_results = await asyncio.gather(*price_coros, return_exceptions=True)
-        
-        ticker_sector_prices = []
         score_coros = []
-        for ticker_sector, financials, price in zip(self.tickers_and_sectors, financials_results, price_results):
-
-            # basic error checking
-            ticker, sector = ticker_sector
-            if isinstance(financials, Exception):
-                self.logger.info(f"Could not receive financials for ticker {ticker}")
-                continue
-            elif isinstance(price, Exception):
-                self.logger.info(f"Could not receive price for ticker {ticker}")
-                continue
-            current_financials, last_financials = financials
-
-            # score stock based on price and financials
-            ticker_sector_prices.append((ticker, sector, price))
+        for ticker_date in ticker_dates:
+            current_financials = ticker_date.current_financials
+            last_financials = ticker_date.last_financials
+            price = ticker_date.price
             score_coros.append(self.score(current_financials, last_financials, price))
-            # results[ticker] = (await self.score(current_financials, last_financials, price), sector, price)
-
+        
         score_results = await asyncio.gather(*score_coros, return_exceptions=True)
-        for score, ticker_sector_price in zip(score_results, ticker_sector_prices):
-            ticker, sector, price = ticker_sector_price
+        for score, ticker_date in zip(score_results, ticker_dates):
+            ticker = ticker_date.ticker.name
+            sector = ticker_date.ticker.sector
+
             if isinstance(score, NotImplementedError):
                 raise NotImplementedError("must implement async score(self, current_financials: StockFinancial, last_financials: StockFinancial, current_price: float)")
             elif isinstance(score, Exception):
@@ -140,7 +132,9 @@ class Algorithm:
             portfolio_values = [1]
 
             curr_date = datetime.now() - relativedelta(months=months_back)
-            ticker_df = (await self._rank_tickers(client,  curr_date))[:num_stocks]
+            ticker_df = (
+                await self._rank_tickers(
+                    await self._get_ticker_dates(client, curr_date)))[:num_stocks]
             
             holdings = {}
             capital_per_stock = 1 / num_stocks
@@ -165,7 +159,9 @@ class Algorithm:
                     portfolio_value += holdings[ticker] * price
                 portfolio_values.append(portfolio_value)
 
-                ticker_df = (await self._rank_tickers(client,  curr_date))[:num_stocks]
+                ticker_df = (
+                    await self._rank_tickers(
+                        await self._get_ticker_dates(client, curr_date)))[:num_stocks]
             
                 holdings = {}
                 capital_per_stock = 1 / num_stocks
@@ -177,7 +173,7 @@ class Algorithm:
 
             return portfolio_values
 
-    def _get_sp500(self) -> List[Tuple[str, str]]:
+    def _get_sp500(self) -> List[Ticker]:
         """Get a list of tickers and their sectors for all stocks in the S&P 500.
 
         Returns:
@@ -191,5 +187,6 @@ class Algorithm:
         for row in table.findAll("tr")[1:]:
             ticker = row.findAll("td")[0].text.replace("\n", "")
             sector = row.findAll("td")[3].text.replace("\n", "")
-            tickers_and_sectors.append((ticker, sector))
+            tickers_and_sectors.append(Ticker(ticker, sector))
+
         return tickers_and_sectors

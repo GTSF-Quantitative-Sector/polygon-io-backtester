@@ -1,5 +1,5 @@
 import aiohttp
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 import concurrent
 from typing import Tuple
 
@@ -89,7 +89,7 @@ class AsyncPolygon:
                 # if price not found within 3 days, price likely does not exist for that time period
                 if i >= 2:
                     raise ValueError(f"Could not find price for {ticker}")
-                    
+
                 i += 1
                 query_date -= timedelta(days=1)
                 str_query_date = query_date.strftime("%Y-%m-%d")
