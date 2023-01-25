@@ -46,7 +46,6 @@ class AsyncPolygon:
         URL = "/vX/reference/financials?sort=filing_date"
         URL += f"&apiKey={self.api_key}&ticker={ticker}&limit=2&period_of_report_date.lte={str_query_date}"
         try:
-            print("DEBUG2:", self.session)
             async with self.session.get(URL, timeout=self.timeout) as resp:
                 response = await resp.json()
         except concurrent.futures.TimeoutError:
