@@ -23,23 +23,25 @@ class AsyncPolygon:
 
     async def get_financials(
             self, ticker: str,
-            query_date: str = None) -> Tuple[StockFinancial, StockFinancial]:
+            query_date: date = None) -> Tuple[StockFinancial, StockFinancial]:
         """ Gathers 2 most recent financial filing data for designated ticker
 
         Args:
             ticker (str): Ticker symbol of the stock.
             api_key (str): API key for Polygon.io.
-            query_date (str, optional): Date to query. Defaults to None, 
+            query_date (date, optional): Date to query. Defaults to None, 
                 which queries today's date.
         Returns:
             (StockFinancial, StockFinancial): the most recent financial filing, the previous financial filing
         """
     
         if query_date is None:
-            query_date = date.today().strftime("%Y-%m-%d")
+            query_date = date.today()
+
+        str_query_date = query_date.strftime("%Y-%m-%d")
 
         URL = "/vX/reference/financials?sort=filing_date"
-        URL += f"&apiKey={self.api_key}&ticker={ticker}&limit=2&period_of_report_date.lte={query_date}"
+        URL += f"&apiKey={self.api_key}&ticker={ticker}&limit=2&period_of_report_date.lte={str_query_date}"
         try:
             async with self.session.get(URL, timeout=self.timeout) as resp:
                 response = await resp.json()
@@ -51,18 +53,18 @@ class AsyncPolygon:
         
         raise ValueError("Failed to retrieve company financials")
 
-    async def get_price(self, ticker: str, query_date: str = None) -> float:
+    async def get_price(self, ticker: str, query_date: date = None) -> float:
         """
         Get price for a specified ticker on a specified date
         Args:
             ticker (str): Ticker symbol of the stock.
-            query_date (str, optional): Date to query. Defaults to None, which queries today's date.
+            query_date (date, optional): Date to query. Defaults to None, which queries today's date.
             timeout (int, optional): time to wait before raising TimeoutError.
         Returns:
             float: Price of the stock on the given date.
         """
         # use a different endpoint for current day and past prices
-        if query_date is None or query_date == date.today().strftime("%Y-%m-%d"):
+        if query_date is None or query_date == date.today():
             url = f"/v2/aggs/ticker/{ticker}/prev?adjusted=true&apiKey={self.api_key}"
 
             try:
@@ -71,9 +73,10 @@ class AsyncPolygon:
                     return response["results"][0]["c"]
             except concurrent.futures.TimeoutError:
                 raise TimeoutError(f"{ticker}: Timed out while retrieving price")
-
         else:
-            url = f"/v1/open-close/{ticker}/{query_date}?adjusted=true&apiKey={self.api_key}"
+
+            str_query_date = query_date.strftime("%Y-%m-%d")
+            url = f"/v1/open-close/{ticker}/{str_query_date}?adjusted=true&apiKey={self.api_key}"
             try:
                 async with self.session.get(url, timeout=self.timeout) as resp:
                     response = await resp.json()
@@ -86,10 +89,12 @@ class AsyncPolygon:
                 # if price not found within 3 days, price likely does not exist for that time period
                 if i >= 2:
                     raise ValueError(f"Could not find price for {ticker}")
+                    
                 i += 1
-                curr_date = datetime.strptime(query_date, "%Y-%m-%d").date()
-                query_date = (curr_date - timedelta(days=1)).strftime("%Y-%m-%d")
-                url = f"/v1/open-close/{ticker}/{query_date}?adjusted=true&apiKey={self.api_key}"
+                query_date -= timedelta(days=1)
+                str_query_date = query_date.strftime("%Y-%m-%d")
+
+                url = f"/v1/open-close/{ticker}/{str_query_date}?adjusted=true&apiKey={self.api_key}"
                 try:
                     async with self.session.get(url, timeout=self.timeout) as resp:
                         response = await resp.json()

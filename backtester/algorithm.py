@@ -6,7 +6,7 @@ import asyncio
 import pandas as pd
 import os
 from tqdm import tqdm
-from datetime import datetime
+from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 import logging
 
@@ -69,13 +69,13 @@ class Algorithm:
 
         raise NotImplementedError("Must implement score(StockFinancial, StockFinancial, float)")
 
-    async def _rank_tickers(self, client: AsyncPolygon, query_date: str) -> pd.DataFrame:
+    async def _rank_tickers(self, client: AsyncPolygon, query_date: date) -> pd.DataFrame:
         """
             Ranks all tickers for a given time period
 
             Args:
                 client (AsyncPolygon): an open Async Polygon connection
-                query_date (str): date to evaluate for (yyyy-mm-dd)
+                query_date (datetime.date): date to evaluate for (yyyy-mm-dd)
 
             Returns:
                 pd.DataFrame: Dataframe containing stock, sector, and score
@@ -140,7 +140,7 @@ class Algorithm:
             portfolio_values = [1]
 
             curr_date = datetime.now() - relativedelta(months=months_back)
-            ticker_df = (await self._rank_tickers(client,  curr_date.strftime("%Y-%m-%d")))[:num_stocks]
+            ticker_df = (await self._rank_tickers(client,  curr_date))[:num_stocks]
             
             holdings = {}
             capital_per_stock = 1 / num_stocks
@@ -157,7 +157,7 @@ class Algorithm:
                 tickers = []
                 for ticker in holdings.keys():
                     tickers.append(ticker)
-                    price_coros.append(client.get_price(ticker, curr_date.strftime("%Y-%m-%d")))
+                    price_coros.append(client.get_price(ticker, curr_date))
                 prices = await asyncio.gather(*price_coros)
 
                 portfolio_value = 0
@@ -165,7 +165,7 @@ class Algorithm:
                     portfolio_value += holdings[ticker] * price
                 portfolio_values.append(portfolio_value)
 
-                ticker_df = (await self._rank_tickers(client,  curr_date.strftime("%Y-%m-%d")))[:num_stocks]
+                ticker_df = (await self._rank_tickers(client,  curr_date))[:num_stocks]
             
                 holdings = {}
                 capital_per_stock = 1 / num_stocks
