@@ -2,6 +2,7 @@ import aiohttp
 from datetime import date, timedelta
 import concurrent
 from typing import Tuple, Optional
+import json
 
 from polygon.rest.models.financials import StockFinancial
 
@@ -20,6 +21,7 @@ class AsyncPolygon:
         self.api_key = api_key
         self.session = None
         self.timeout = timeout
+        self.active = False
 
     async def get_financials(
             self,
@@ -44,6 +46,7 @@ class AsyncPolygon:
         URL = "/vX/reference/financials?sort=filing_date"
         URL += f"&apiKey={self.api_key}&ticker={ticker}&limit=2&period_of_report_date.lte={str_query_date}"
         try:
+            print("DEBUG2:", self.session)
             async with self.session.get(URL, timeout=self.timeout) as resp:
                 response = await resp.json()
         except concurrent.futures.TimeoutError:
@@ -109,7 +112,9 @@ class AsyncPolygon:
 
     async def __aenter__(self):
         self.session = aiohttp.ClientSession("https://api.polygon.io")
+        self.active = True
         return self
 
     async def __aexit__(self, *args):
         await self.session.close()
+        self.active = False

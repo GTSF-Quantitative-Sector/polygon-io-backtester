@@ -1,17 +1,16 @@
-import backtester.config
-import requests
-import bs4 as bs
-from typing import List
 import asyncio
+import bs4 as bs
+from datetime import date
+from dateutil.relativedelta import relativedelta
+import requests
+from typing import List
 import pandas as pd
 import os
-from tqdm import tqdm
-from datetime import datetime, date
-from dateutil.relativedelta import relativedelta
 import logging
 
 from polygon.rest.models.financials import StockFinancial
 from backtester.async_polygon import AsyncPolygon
+import backtester.config
 from backtester.ticker_date import Ticker, TickerDate
 
 # TODO: Caching
@@ -136,7 +135,7 @@ class Algorithm:
         async with AsyncPolygon(self.API_KEY) as client:
             portfolio_values = [1]
 
-            curr_date = datetime.now() - relativedelta(months=months_back)
+            curr_date = date.today() - relativedelta(months=months_back)
             ticker_df = (
                 await self._rank_tickers(
                     await self._get_ticker_dates(client, curr_date)))[:num_stocks]
@@ -149,7 +148,7 @@ class Algorithm:
             for index, row in ticker_df.iterrows():
                 holdings[index] = row['num_shares']
 
-            for _ in tqdm(range(months_back-1)):
+            for _ in range(months_back-1):
                 curr_date += relativedelta(months=1)
                 
                 price_coros = []
