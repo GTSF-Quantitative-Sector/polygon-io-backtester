@@ -82,7 +82,6 @@ class AsyncPolygon:
         else:
             str_query_date = query_date.strftime("%Y-%m-%d")
             url = f"/v1/open-close/{ticker}/{str_query_date}?adjusted=true&apiKey={self.api_key}"
-            print(url)
             try:
                 async with self.session.get(url, timeout=self.timeout) as resp:
                     response = await resp.json()
