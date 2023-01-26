@@ -73,7 +73,6 @@ class AsyncPolygon:
         # use a different endpoint for current day and past prices
         if query_date is None or query_date == date.today():
             url = f"/v2/aggs/ticker/{ticker}/prev?adjusted=true&apiKey={self.api_key}"
-
             try:
                 async with self.session.get(url, timeout=self.timeout) as resp:
                     response = await resp.json()
@@ -83,6 +82,7 @@ class AsyncPolygon:
         else:
             str_query_date = query_date.strftime("%Y-%m-%d")
             url = f"/v1/open-close/{ticker}/{str_query_date}?adjusted=true&apiKey={self.api_key}"
+            print(url)
             try:
                 async with self.session.get(url, timeout=self.timeout) as resp:
                     response = await resp.json()
