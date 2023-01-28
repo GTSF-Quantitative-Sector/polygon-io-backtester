@@ -76,7 +76,7 @@ async def test_get_price_timeouts(mock_aiohttp_timeout):
         with pytest.raises(TimeoutError):
             await client.get_price("AAPL")
         with pytest.raises(TimeoutError):
-            await client.get_price(date(2020, 1, 9))
+            await client.get_price("AAPL", query_date=date(2020, 1, 9))
 
 @pytest.mark.asyncio
 async def test_get_price_past(mock_aiohttp_get_price_past):

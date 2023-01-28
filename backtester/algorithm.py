@@ -7,14 +7,12 @@ from typing import List
 import pandas as pd
 import os
 import logging
+from tqdm import tqdm
 
-from polygon.rest.models.financials import StockFinancial
-from backtester.async_polygon import AsyncPolygon
 import backtester.config
+from backtester.async_polygon import AsyncPolygon
 from backtester.ticker_date import Ticker, TickerDate
-
-# TODO: Caching
-
+from polygon.rest.models.financials import StockFinancial
 
 class Algorithm:
 
@@ -52,7 +50,7 @@ class Algorithm:
                 list: percentage of initial capital at each timestep
         """
 
-        # weird quirk needed for windows
+        # weird quirk needed to run on windows with no warnings
         if os.name == "nt":
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -92,7 +90,7 @@ class Algorithm:
 
         return results
 
-    async def _rank_tickers(self, ticker_dates: List[TickerDate]) -> pd.DataFrame:
+    async def _rank_tickers(self, ticker_dates: List[TickerDate], num_stocks: int) -> List[TickerDate]:
         """
             Ranks all tickers for a given time period
 
@@ -104,14 +102,16 @@ class Algorithm:
                 pd.DataFrame: Dataframe containing stock, sector, and score (sorted)
         """
 
-        results = {}
+        td_lookup = {}
         score_coros = []
+
         for ticker_date in ticker_dates:
             current_financials = ticker_date.current_financials
             last_financials = ticker_date.last_financials
             price = ticker_date.price
             score_coros.append(self.score(current_financials, last_financials, price))
         
+        score_map = {}
         score_results = await asyncio.gather(*score_coros, return_exceptions=True)
         for score, ticker_date in zip(score_results, ticker_dates):
             ticker = ticker_date.ticker.name
@@ -124,31 +124,31 @@ class Algorithm:
                 self.logger.info(f"Could not score ticker {ticker}")
                 continue
 
-            results[ticker] = (score, sector, price)        
+            score_map[ticker] = (score, sector, price)
+            td_lookup[ticker] = ticker_date        
 
-        # load into df
-        df = pd.DataFrame.from_dict(results, orient="index", columns=["score", "sector", "price"])
+        # load into df for easy groupby sorting
+        res = []
+        df = pd.DataFrame.from_dict(score_map, orient="index", columns=["score", "sector", "price"])
         df = df.sort_values(by="score", ascending=False)
-        return df
+        df = df.groupby('sector').head(1)[:num_stocks]
+        for index, _ in df.iterrows():
+            res.append(td_lookup[index])
+        return res
 
     async def _backtest(self, months_back: int, num_stocks: int):
         async with AsyncPolygon(self.API_KEY) as client:
             portfolio_values = [1]
 
             curr_date = date.today() - relativedelta(months=months_back)
-            ticker_df = (
-                await self._rank_tickers(
-                    await self._get_ticker_dates(client, curr_date)))[:num_stocks]
+            tickers = await self._rank_tickers(await self._get_ticker_dates(client, curr_date), num_stocks)
             
             holdings = {}
-            capital_per_stock = 1 / num_stocks
+            capital_per_stock = portfolio_values[-1] / num_stocks
+            for ticker in tickers:
+                holdings[ticker.name] = capital_per_stock / ticker.price
 
-            ticker_df['num_shares'] = capital_per_stock / ticker_df['price']
-
-            for index, row in ticker_df.iterrows():
-                holdings[index] = row['num_shares']
-
-            for _ in range(months_back-1):
+            for _ in tqdm(range(months_back-1)):
                 curr_date += relativedelta(months=1)
                 
                 price_coros = []
@@ -163,19 +163,13 @@ class Algorithm:
                     portfolio_value += holdings[ticker] * price
                 portfolio_values.append(portfolio_value)
 
-                ticker_df = (
-                    await self._rank_tickers(
-                        await self._get_ticker_dates(client, curr_date)))[:num_stocks]
-            
+                tickers = await self._rank_tickers(await self._get_ticker_dates(client, curr_date), num_stocks)
                 holdings = {}
-                capital_per_stock = 1 / num_stocks
+                capital_per_stock = portfolio_values[-1] / num_stocks
+                for ticker in tickers:
+                    holdings[ticker.name] = capital_per_stock / ticker.price
 
-                ticker_df['num_shares'] = capital_per_stock / ticker_df['price']
-
-                for index, row in ticker_df.iterrows():
-                    holdings[index] = row['num_shares']
-
-            return portfolio_values
+        return portfolio_values
 
     def _get_sp500(self) -> List[Ticker]:
         """Get a list of tickers and their sectors for all stocks in the S&P 500.

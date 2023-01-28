@@ -14,5 +14,5 @@ class BasicAlgorithm(Algorithm):
 
 
 if __name__ == "__main__":
-    algo = BasicAlgorithm(verbose=True)
+    algo = BasicAlgorithm()
     print(algo.backtest())

@@ -85,3 +85,11 @@ class TickerDate:
         if not self.synced:
             raise AttributeError("must sync TickerDate before accessing last_financials")
         return self._last_financials
+
+    @property
+    def name(self) -> str:
+        return self.ticker.name
+
+    @property
+    def sector(self) -> str:
+        return self.ticker.sector
