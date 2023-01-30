@@ -3,9 +3,10 @@ import pytest
 
 from backtester.config import KEY
 from backtester.async_polygon import AsyncPolygon
+from polygon.rest.models.financials import StockFinancial
 from tests.fixtures.aiohttp_fixtures import mock_aiohttp_financials_success, mock_aiohttp_timeout, mock_aiohttp_financials_failed
 from tests.fixtures.aiohttp_fixtures import mock_aiohttp_get_price_today, mock_aiohttp_get_price_past, mock_aiohttp_get_price_value_error
-from polygon.rest.models.financials import StockFinancial
+
 
 @pytest.mark.asyncio
 async def test_aenter_aexit():

@@ -1,5 +1,5 @@
 import asyncio
-import bs4 as bs
+from bs4 import BeautifulSoup
 from datetime import date
 from dateutil.relativedelta import relativedelta
 import logging
@@ -177,7 +177,7 @@ class Algorithm:
         """
         url = "http://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
         response = requests.get(url)
-        source = bs.BeautifulSoup(response.text, "lxml")
+        source = BeautifulSoup(response.text, "lxml")
         table = source.find("table", {"class": "wikitable sortable"})
         tickers_and_sectors = []
         for row in table.findAll("tr")[1:]:

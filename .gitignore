@@ -3,3 +3,5 @@ config.py
 __pycache__
 venv
 .coverage
+.pytest_cache
+.mypy_cache
