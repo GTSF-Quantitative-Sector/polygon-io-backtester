@@ -4,15 +4,16 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 import logging
 import os
-import pandas as pd
 import requests
 from tqdm import tqdm
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import backtester.config
 from backtester.async_polygon import AsyncPolygon
 from backtester.ticker_date import Ticker, TickerDate
 from polygon.rest.models.financials import StockFinancial
+
+# TODO: Backtest report creation
 
 class Algorithm:
 
@@ -32,7 +33,7 @@ class Algorithm:
         else:
             logging.basicConfig(level=logging.CRITICAL)
 
-        if not tickers:
+        if tickers is None:
             self.logger.debug("Pulling default universe of tickers: current S&P 500")
             tickers = self._get_sp500()        
         
@@ -90,6 +91,21 @@ class Algorithm:
 
         return results
 
+    def _group_by_sort(self, ticker_scores: List[Tuple[TickerDate, float]]) -> List[TickerDate]:
+        
+        sector_max = {}
+        for ticker_date, score in ticker_scores:
+            if ticker_date.sector not in sector_max.keys():
+                sector_max[ticker_date.sector] = (ticker_date, score)
+            else:
+                _, curr_high_score = sector_max[ticker_date.sector]
+                if score > curr_high_score:
+                    sector_max[ticker_date.sector] = (ticker_date, score)
+
+        sector_maxes = list(sector_max.values())
+        sector_maxes.sort(key=lambda x: x[1], reverse=True)
+        return [i[0] for i in sector_maxes]
+
     async def _rank_tickers(self, ticker_dates: List[TickerDate], num_stocks: int) -> List[TickerDate]:
         """
             Ranks all tickers for a given time period
@@ -102,39 +118,27 @@ class Algorithm:
                 pd.DataFrame: Dataframe containing stock, sector, and score (sorted)
         """
 
-        td_lookup = {}
         score_coros = []
-
         for ticker_date in ticker_dates:
             current_financials = ticker_date.current_financials
             last_financials = ticker_date.last_financials
             price = ticker_date.price
             score_coros.append(self.score(current_financials, last_financials, price))
         
-        score_map = {}
+        ticker_score = []
         score_results = await asyncio.gather(*score_coros, return_exceptions=True)
         for score, ticker_date in zip(score_results, ticker_dates):
-            ticker = ticker_date.ticker.name
-            sector = ticker_date.ticker.sector
             price = ticker_date.price
 
             if isinstance(score, NotImplementedError):
                 raise NotImplementedError("must implement async score(self, current_financials: StockFinancial, last_financials: StockFinancial, current_price: float)")
             elif isinstance(score, Exception):
-                self.logger.info(f"Could not score ticker {ticker}")
+                self.logger.info(f"Could not score ticker {ticker_date.name}")
                 continue
 
-            score_map[ticker] = (score, sector, price)
-            td_lookup[ticker] = ticker_date        
+            ticker_score.append((ticker_date, score))
 
-        # load into df for easy groupby sorting
-        res = []
-        df = pd.DataFrame.from_dict(score_map, orient="index", columns=["score", "sector", "price"])
-        df = df.sort_values(by="score", ascending=False)
-        df = df.groupby('sector').head(1)[:num_stocks]
-        for index, _ in df.iterrows():
-            res.append(td_lookup[index])
-        return res
+        return self._group_by_sort(ticker_score)[:num_stocks]
 
     async def _backtest(self, months_back: int, num_stocks: int) -> List[float]:
         async with AsyncPolygon(self.API_KEY) as client:
