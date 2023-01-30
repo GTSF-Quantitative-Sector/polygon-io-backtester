@@ -1,8 +1,7 @@
 import aiohttp
-from datetime import date, timedelta
 import concurrent
+from datetime import date, timedelta
 from typing import Tuple, Optional
-import json
 
 from polygon.rest.models.financials import StockFinancial
 
@@ -11,6 +10,8 @@ class AsyncPolygon:
     """
        Class for interacting with the Polygon.io REST API in an asynchronous fashion
     """
+
+    session: Optional[aiohttp.ClientSession]
 
     def __init__(self, api_key: str, timeout: Optional[float] = 10):
         """
@@ -37,6 +38,9 @@ class AsyncPolygon:
         Returns:
             (StockFinancial, StockFinancial): the most recent financial filing, the previous financial filing
         """
+
+        if self.session is None:
+            raise RuntimeError("must use async context manager to initialize client")
     
         if query_date is None:
             query_date = date.today()
@@ -70,6 +74,10 @@ class AsyncPolygon:
         Returns:
             float: Price of the stock on the given date.
         """
+
+        if self.session is None:
+            raise RuntimeError("must use async context manager to initialize client")
+
         # use a different endpoint for current day and past prices
         if query_date is None or query_date == date.today():
             url = f"/v2/aggs/ticker/{ticker}/prev?adjusted=true&apiKey={self.api_key}"

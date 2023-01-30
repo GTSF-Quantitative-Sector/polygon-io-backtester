@@ -2,12 +2,12 @@ import asyncio
 import bs4 as bs
 from datetime import date
 from dateutil.relativedelta import relativedelta
-import requests
-from typing import List
-import pandas as pd
-import os
 import logging
+import os
+import pandas as pd
+import requests
 from tqdm import tqdm
+from typing import List, Optional
 
 import backtester.config
 from backtester.async_polygon import AsyncPolygon
@@ -18,7 +18,7 @@ class Algorithm:
 
     API_KEY = backtester.config.KEY
 
-    def __init__(self, tickers: List[Ticker] = None, verbose: bool = False):
+    def __init__(self, tickers: Optional[List[Ticker]] = None, verbose: bool = False):
         """
             Initialize a new Algorithm base class
 
@@ -136,9 +136,9 @@ class Algorithm:
             res.append(td_lookup[index])
         return res
 
-    async def _backtest(self, months_back: int, num_stocks: int):
+    async def _backtest(self, months_back: int, num_stocks: int) -> List[float]:
         async with AsyncPolygon(self.API_KEY) as client:
-            portfolio_values = [1]
+            portfolio_values = [1.0]
 
             curr_date = date.today() - relativedelta(months=months_back)
             tickers = await self._rank_tickers(await self._get_ticker_dates(client, curr_date), num_stocks)
@@ -152,15 +152,13 @@ class Algorithm:
                 curr_date += relativedelta(months=1)
                 
                 price_coros = []
-                tickers = []
-                for ticker in holdings.keys():
-                    tickers.append(ticker)
-                    price_coros.append(client.get_price(ticker, curr_date))
+                for ticker_name in holdings.keys():
+                    price_coros.append(client.get_price(ticker_name, curr_date))
                 prices = await asyncio.gather(*price_coros)
 
                 portfolio_value = 0
                 for ticker, price in zip(tickers, prices):
-                    portfolio_value += holdings[ticker] * price
+                    portfolio_value += holdings[ticker.name] * price
                 portfolio_values.append(portfolio_value)
 
                 tickers = await self._rank_tickers(await self._get_ticker_dates(client, curr_date), num_stocks)

@@ -1,6 +1,7 @@
+import pytest
+
 from backtester import Algorithm, StockFinancial
 from tests.fixtures.ticker_date_fixtures import sample_ticker_dates
-import pytest
 
 @pytest.mark.asyncio
 async def test_rank_tickers(sample_ticker_dates):

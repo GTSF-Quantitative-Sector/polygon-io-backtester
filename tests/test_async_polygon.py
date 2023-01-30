@@ -1,5 +1,5 @@
-import pytest
 from datetime import date
+import pytest
 
 from backtester.config import KEY
 from backtester.async_polygon import AsyncPolygon

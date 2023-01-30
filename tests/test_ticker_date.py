@@ -1,11 +1,10 @@
+from asyncmock import AsyncMock
 from datetime import date
 import pytest
-from asyncmock import AsyncMock
 
-from backtester.ticker_date import Ticker, TickerDate
 from backtester.async_polygon import AsyncPolygon
 from backtester.config import KEY
-
+from backtester.ticker_date import Ticker, TickerDate
 from polygon.rest.models.financials import StockFinancial
 
 SAMPLE_STOCK_PRICE = 1885.0
