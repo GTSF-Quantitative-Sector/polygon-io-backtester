@@ -8,16 +8,16 @@ from polygon.rest.models.financials import StockFinancial
 
 class AsyncPolygon:
     """
-       Class for interacting with the Polygon.io REST API in an asynchronous fashion
+    Class for interacting with the Polygon.io REST API in an asynchronous fashion
     """
 
     session: Optional[aiohttp.ClientSession]
 
     def __init__(self, api_key: str, timeout: Optional[float] = 10):
         """
-            Args:
-                api_key (str): the Polygon.io API key to use
-                timeout (float, optional): default timeout for http requests, defaults to 10 seconds
+        Args:
+            api_key (str): the Polygon.io API key to use
+            timeout (float, optional): default timeout for http requests, defaults to 10 seconds
         """
         self.api_key = api_key
         self.session = None
@@ -25,15 +25,14 @@ class AsyncPolygon:
         self.active = False
 
     async def get_financials(
-            self,
-            ticker: str,
-            query_date: Optional[date] = None) -> Tuple[StockFinancial, StockFinancial]:
-        """ Gathers 2 most recent financial filing data for designated ticker
+        self, ticker: str, query_date: Optional[date] = None
+    ) -> Tuple[StockFinancial, StockFinancial]:
+        """Gathers 2 most recent financial filing data for designated ticker
 
         Args:
             ticker (str): Ticker symbol of the stock.
             api_key (str): API key for Polygon.io.
-            query_date (date, optional): Date to query. Defaults to None, 
+            query_date (date, optional): Date to query. Defaults to None,
                 which queries today's date.
         Returns:
             (StockFinancial, StockFinancial): the most recent financial filing, the previous financial filing
@@ -41,7 +40,7 @@ class AsyncPolygon:
 
         if self.session is None:
             raise RuntimeError("must use async context manager to initialize client")
-    
+
         if query_date is None:
             query_date = date.today()
 
@@ -53,17 +52,18 @@ class AsyncPolygon:
             async with self.session.get(URL, timeout=self.timeout) as resp:
                 response = await resp.json()
         except concurrent.futures.TimeoutError:
-            raise TimeoutError(f"{ticker}: Timed out while retrieving company financials")
+            raise TimeoutError(
+                f"{ticker}: Timed out while retrieving company financials"
+            )
 
-        if response['status'] == 'OK':
-            return StockFinancial.from_dict(response['results'][0]), StockFinancial.from_dict(response['results'][1])
+        if response["status"] == "OK":
+            return StockFinancial.from_dict(
+                response["results"][0]
+            ), StockFinancial.from_dict(response["results"][1])
 
         raise ValueError("Failed to retrieve company financials")
 
-    async def get_price(
-            self,
-            ticker: str,
-            query_date: Optional[date] = None) -> float:
+    async def get_price(self, ticker: str, query_date: Optional[date] = None) -> float:
 
         """
         Get price for a specified ticker on a specified date

@@ -7,7 +7,7 @@ from backtester.async_polygon import AsyncPolygon, StockFinancial
 class Ticker:
 
     """
-        Hold the name and sector of a ticker in a singular class
+    Hold the name and sector of a ticker in a singular class
     """
 
     name: str
@@ -26,8 +26,8 @@ class Ticker:
 class TickerDate:
 
     """
-        Class to contain information for a ticker on a specific date.
-        Includes price and current/last financials
+    Class to contain information for a ticker on a specific date.
+    Includes price and current/last financials
     """
 
     query_date: date
@@ -41,12 +41,12 @@ class TickerDate:
     def __init__(self, ticker: Ticker, query_date: date, client: AsyncPolygon) -> None:
 
         """
-            Args:
-                ticker (Ticker): ticker to pull data for
-                query_date (datetime.date): date for which to pull data
-                client (AsyncPolygon): AsyncPolygon client to use.
-                    Preferrably the same client across all TickerDates 
-                    so multiple client sessions are not open.
+        Args:
+            ticker (Ticker): ticker to pull data for
+            query_date (datetime.date): date for which to pull data
+            client (AsyncPolygon): AsyncPolygon client to use.
+                Preferrably the same client across all TickerDates
+                so multiple client sessions are not open.
         """
 
         self.ticker = ticker
@@ -56,7 +56,7 @@ class TickerDate:
 
     async def sync(self):
         """
-            Synchronize ticker data (price, current_financials, last_financials) for indicated date
+        Synchronize ticker data (price, current_financials, last_financials) for indicated date
         """
 
         financials, price = await asyncio.gather(
@@ -77,13 +77,17 @@ class TickerDate:
     @property
     def current_financials(self) -> StockFinancial:
         if not self.synced:
-            raise AttributeError("must sync TickerDate before accessing current_financials")
+            raise AttributeError(
+                "must sync TickerDate before accessing current_financials"
+            )
         return self._current_financials
 
     @property
     def last_financials(self) -> StockFinancial:
         if not self.synced:
-            raise AttributeError("must sync TickerDate before accessing last_financials")
+            raise AttributeError(
+                "must sync TickerDate before accessing last_financials"
+            )
         return self._last_financials
 
     @property

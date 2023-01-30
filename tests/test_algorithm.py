@@ -3,6 +3,7 @@ import pytest
 from backtester import Algorithm, StockFinancial
 from tests.fixtures.ticker_date_fixtures import sample_ticker_dates
 
+
 @pytest.mark.asyncio
 async def test_group_by_sort(sample_ticker_dates):
     algo = Algorithm(None)
@@ -29,12 +30,18 @@ async def test_group_by_sort(sample_ticker_dates):
     assert tickers[3].name == "ADBE"
     assert tickers[3].sector == "Technology"
 
+
 @pytest.mark.asyncio
 async def test_rank_tickers(sample_ticker_dates):
     class TestAlgorithm(Algorithm):
 
         # simply score by price
-        async def score(self, current_financials: StockFinancial, last_financials: StockFinancial, current_price: float) -> float:
+        async def score(
+            self,
+            current_financials: StockFinancial,
+            last_financials: StockFinancial,
+            current_price: float,
+        ) -> float:
             return current_price
 
     algo = TestAlgorithm(None)
