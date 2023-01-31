@@ -6,7 +6,7 @@ from tests.fixtures.ticker_date_fixtures import sample_ticker_dates
 
 @pytest.mark.asyncio
 async def test_group_by_sort(sample_ticker_dates):
-    algo = Algorithm(None)
+    algo = Algorithm([])
 
     ticker_scores = []
     count = 0
@@ -44,7 +44,7 @@ async def test_rank_tickers(sample_ticker_dates):
         ) -> float:
             return current_price
 
-    algo = TestAlgorithm(None)
+    algo = TestAlgorithm([])
 
     # ensure it is returning num_stocks
     tickers = await algo._rank_tickers(sample_ticker_dates, num_stocks=4)

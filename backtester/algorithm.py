@@ -1,12 +1,10 @@
 import asyncio
-from bs4 import BeautifulSoup
 from datetime import date
 from dateutil.relativedelta import relativedelta
 import logging
 import os
-import requests
 from tqdm import tqdm
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import backtester.config
 from backtester.async_polygon import AsyncPolygon
@@ -20,13 +18,13 @@ class Algorithm:
 
     API_KEY = backtester.config.KEY
 
-    def __init__(self, tickers: Optional[List[Ticker]] = None, verbose: bool = False):
+    def __init__(self, tickers: List[Tuple[str, str]], verbose: bool = False):
         """
         Initialize a new Algorithm base class
 
         Args:
-            tickers_and_sectors (list[Ticker]): list of Ticker (ticker_date.py) objects containing ticker name and sector.
-                Universe of tickers to consider in backtest. Defaults to current S&P 500.
+            tickers_and_sectors (list[Ticker]): list of Tuples of the form (symbol, sector).
+                Universe of tickers to consider in backtest.
         """
         self.logger = logging.getLogger("backtester")
         if verbose:
@@ -34,11 +32,7 @@ class Algorithm:
         else:
             logging.basicConfig(level=logging.CRITICAL)
 
-        if tickers is None:
-            self.logger.debug("Pulling default universe of tickers: current S&P 500")
-            tickers = self._get_sp500()
-
-        self.tickers = tickers
+        self.tickers = [Ticker(symbol, sector) for symbol, sector in tickers]
 
     def backtest(self, months_back: int = 12, num_stocks: int = 5) -> list:
         """
@@ -86,9 +80,9 @@ class Algorithm:
         ticker_dates = []
 
         for ticker in self.tickers:
-            ticker_date = TickerDate(ticker, query_date, client)
+            ticker_date = TickerDate(ticker, query_date)
             ticker_dates.append(ticker_date)
-            coros.append(ticker_date.sync())
+            coros.append(ticker_date.sync(client))
 
         results = []
         exceptions = await asyncio.gather(*coros, return_exceptions=True)
@@ -105,6 +99,12 @@ class Algorithm:
     def _group_by_sort(
         self, ticker_scores: List[Tuple[TickerDate, float]]
     ) -> List[TickerDate]:
+        """
+        Takes in list of TickerDates and their respective scores, selects the
+            highest scoring ticker from each sector, and sorts the top scorers in each sector.
+        Args:
+            ticker_scores (List[Tuple[TickerDate, float]]): List of TickerDates and respective scores
+        """
 
         sector_max = {}
         for ticker_date, score in ticker_scores:
@@ -193,21 +193,3 @@ class Algorithm:
                     holdings[ticker.name] = capital_per_stock / ticker.price
 
         return portfolio_values
-
-    def _get_sp500(self) -> List[Ticker]:
-        """Get a list of tickers and their sectors for all stocks in the S&P 500.
-
-        Returns:
-            List[Tuple[str, str]]: List of tuples containing ticker and sector.
-        """
-        url = "http://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-        response = requests.get(url)
-        source = BeautifulSoup(response.text, "lxml")
-        table = source.find("table", {"class": "wikitable sortable"})
-        tickers_and_sectors = []
-        for row in table.findAll("tr")[1:]:
-            ticker = row.findAll("td")[0].text.replace("\n", "")
-            sector = row.findAll("td")[3].text.replace("\n", "")
-            tickers_and_sectors.append(Ticker(ticker, sector))
-
-        return tickers_and_sectors

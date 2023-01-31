@@ -33,35 +33,35 @@ class TickerDate:
     query_date: date
     ticker: Ticker
     synced: bool
-    _client: AsyncPolygon
     _current_financials: StockFinancial
     _last_financials: StockFinancial
     _price: float
 
-    def __init__(self, ticker: Ticker, query_date: date, client: AsyncPolygon) -> None:
+    def __init__(self, ticker: Ticker, query_date: date) -> None:
 
         """
         Args:
             ticker (Ticker): ticker to pull data for
             query_date (datetime.date): date for which to pull data
-            client (AsyncPolygon): AsyncPolygon client to use.
-                Preferrably the same client across all TickerDates
-                so multiple client sessions are not open.
+
         """
 
         self.ticker = ticker
         self.query_date = query_date
         self.synced = False
-        self._client = client
 
-    async def sync(self):
+    async def sync(self, client: AsyncPolygon):
         """
         Synchronize ticker data (price, current_financials, last_financials) for indicated date
+        Args:
+            client (AsyncPolygon): AsyncPolygon client to use.
+                Preferrably the same client across all TickerDates
+                so multiple client sessions are not open.
         """
 
         financials, price = await asyncio.gather(
-            self._client.get_financials(self.ticker.name, self.query_date),
-            self._client.get_price(self.ticker.name, self.query_date),
+            client.get_financials(self.ticker.name, self.query_date),
+            client.get_price(self.ticker.name, self.query_date),
         )
 
         self._current_financials, self._last_financials = financials

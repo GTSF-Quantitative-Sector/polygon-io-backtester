@@ -55,7 +55,7 @@ def test_ticker_initialization():
 async def test_ticker_date_initialization():
     async with AsyncPolygon(KEY) as client:
         t = Ticker("AAPL", "Technology")
-        td = TickerDate(t, date.today(), client)
+        td = TickerDate(t, date.today())
 
         assert not td.synced
         assert td.query_date == date.today()
@@ -74,8 +74,8 @@ async def test_ticker_date_initialization():
 async def test_ticker_date_sync(mock_async_polygon):
     async with mock_async_polygon as client:
         t = Ticker("AAPL", "Technology")
-        td = TickerDate(t, date.today(), client)
-        await td.sync()
+        td = TickerDate(t, date.today())
+        await td.sync(client)
 
         assert td.price == SAMPLE_STOCK_PRICE
         assert td.synced

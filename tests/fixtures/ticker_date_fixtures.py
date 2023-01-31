@@ -6,18 +6,18 @@ from backtester import StockFinancial
 @pytest.fixture
 def sample_ticker_dates():
     tds = [
-        TickerDate(Ticker("AAPL", "Technology"), None, None),
-        TickerDate(Ticker("META", "Technology"), None, None),
-        TickerDate(Ticker("ADBE", "Technology"), None, None),
-        TickerDate(Ticker("RTX", "Industrials"), None, None),
-        TickerDate(Ticker("APD", "Industrials"), None, None),
-        TickerDate(Ticker("URI", "Industrials"), None, None),
-        TickerDate(Ticker("DE", "Industrials"), None, None),
-        TickerDate(Ticker("MDT", "Healthcare"), None, None),
-        TickerDate(Ticker("VRTX", "Healthcare"), None, None),
-        TickerDate(Ticker("TMO", "Healthcare"), None, None),
-        TickerDate(Ticker("ICE", "Financials"), None, None),
-        TickerDate(Ticker("MS", "Financials"), None, None),
+        TickerDate(Ticker("AAPL", "Technology"), None),
+        TickerDate(Ticker("META", "Technology"), None),
+        TickerDate(Ticker("ADBE", "Technology"), None),
+        TickerDate(Ticker("RTX", "Industrials"), None),
+        TickerDate(Ticker("APD", "Industrials"), None),
+        TickerDate(Ticker("URI", "Industrials"), None),
+        TickerDate(Ticker("DE", "Industrials"), None),
+        TickerDate(Ticker("MDT", "Healthcare"), None),
+        TickerDate(Ticker("VRTX", "Healthcare"), None),
+        TickerDate(Ticker("TMO", "Healthcare"), None),
+        TickerDate(Ticker("ICE", "Financials"), None),
+        TickerDate(Ticker("MS", "Financials"), None),
     ]
 
     prices = [1, 2, 3, 5, 3, 2, 1, 2, 2.5, 1.5, 4, 2]
