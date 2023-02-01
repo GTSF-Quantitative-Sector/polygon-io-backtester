@@ -1,4 +1,5 @@
 from backtester import Algorithm, StockFinancial
+import json
 
 
 class BasicAlgorithm(Algorithm):
@@ -16,5 +17,9 @@ class BasicAlgorithm(Algorithm):
 
 
 if __name__ == "__main__":
-    algo = BasicAlgorithm([("AAPL", "Technology")])
+
+    with open("data/sp500.json", "r") as f:
+        tickers_and_sectors = json.load(f)
+
+    algo = BasicAlgorithm(tickers_and_sectors)
     print(algo.backtest())

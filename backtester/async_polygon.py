@@ -64,7 +64,6 @@ class AsyncPolygon:
         raise ValueError("Failed to retrieve company financials")
 
     async def get_price(self, ticker: str, query_date: Optional[date] = None) -> float:
-
         """
         Get price for a specified ticker on a specified date
         Args:

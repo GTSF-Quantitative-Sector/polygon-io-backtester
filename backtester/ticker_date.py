@@ -5,7 +5,6 @@ from backtester.async_polygon import AsyncPolygon, StockFinancial
 
 
 class Ticker:
-
     """
     Hold the name and sector of a ticker in a singular class
     """
@@ -22,9 +21,14 @@ class Ticker:
         self.name = name
         self.sector = sector
 
+    def __str__(self) -> str:
+        return f"{self.name}({self.sector})"
+
+    def __repr__(self) -> str:
+        return f"Ticker object({self.name} {self.sector})"
+
 
 class TickerDate:
-
     """
     Class to contain information for a ticker on a specific date.
     Includes price and current/last financials
@@ -38,7 +42,6 @@ class TickerDate:
     _price: float
 
     def __init__(self, ticker: Ticker, query_date: date) -> None:
-
         """
         Args:
             ticker (Ticker): ticker to pull data for
@@ -97,3 +100,9 @@ class TickerDate:
     @property
     def sector(self) -> str:
         return self.ticker.sector
+
+    def __str__(self) -> str:
+        return f"{str(self.ticker)} on {self.query_date}"
+
+    def __repr__(self) -> str:
+        return f"TickerDate object({self.ticker} on {self.query_date})"

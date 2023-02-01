@@ -19,8 +19,7 @@ class Algorithm:
     API_KEY = backtester.config.KEY
 
     def __init__(self, tickers: List[Tuple[str, str]], verbose: bool = False):
-        """
-        Initialize a new Algorithm base class
+        """Initialize a new Algorithm base class
 
         Args:
             tickers_and_sectors (list[Ticker]): list of Tuples of the form (symbol, sector).
@@ -35,8 +34,7 @@ class Algorithm:
         self.tickers = [Ticker(symbol, sector) for symbol, sector in tickers]
 
     def backtest(self, months_back: int = 12, num_stocks: int = 5) -> list:
-        """
-        Synchronous method for calling the async backtest
+        """Synchronous method for calling the async backtest
 
         Args:
             months_back (int): how many months to run the backtest over
@@ -50,6 +48,8 @@ class Algorithm:
         if os.name == "nt":
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+        # cannot select more stocks than we are considering
+        num_stocks = min(num_stocks, len(self.tickers))
         self.logger.debug("Beginning backtest")
         return asyncio.run(self._backtest(months_back, num_stocks))
 
@@ -59,7 +59,8 @@ class Algorithm:
         last_financials: StockFinancial,
         current_price: float,
     ) -> float:
-        """
+        """ Provide a score for an individual stock
+
         Args:
             current_financials (StockFinancial): the most recent company financials
             last_financials (StockFinancial): the previous company financials
@@ -99,11 +100,14 @@ class Algorithm:
     def _group_by_sort(
         self, ticker_scores: List[Tuple[TickerDate, float]]
     ) -> List[TickerDate]:
-        """
+        """Sort tickers and select highest scored from each sector
+        
         Takes in list of TickerDates and their respective scores, selects the
             highest scoring ticker from each sector, and sorts the top scorers in each sector.
         Args:
             ticker_scores (List[Tuple[TickerDate, float]]): List of TickerDates and respective scores
+        Returns:
+            Sorted list of maximum scored ticker from each sector
         """
 
         sector_max = {}
@@ -122,8 +126,7 @@ class Algorithm:
     async def _rank_tickers(
         self, ticker_dates: List[TickerDate], num_stocks: int
     ) -> List[TickerDate]:
-        """
-        Ranks all tickers for a given time period
+        """Ranks all tickers for a given time period
 
         Args:
             ticker_dates (list(TickerDate)): stock ticker/data objects to rank
@@ -157,15 +160,20 @@ class Algorithm:
 
         return self._group_by_sort(ticker_score)[:num_stocks]
 
-    async def _backtest(self, months_back: int, num_stocks: int) -> List[float]:
+    async def _backtest(self, months_back: int, num_stocks: int) -> List[List[TickerDate]]:
+
         async with AsyncPolygon(self.API_KEY) as client:
+
+            # portfolio starts with 100% value
             portfolio_values = [1.0]
 
+            # get tickers to start backtest period with
             curr_date = date.today() - relativedelta(months=months_back)
             tickers = await self._rank_tickers(
                 await self._get_ticker_dates(client, curr_date), num_stocks
             )
 
+            # calculate initial holdings
             holdings = {}
             capital_per_stock = portfolio_values[-1] / num_stocks
             for ticker in tickers:
@@ -174,19 +182,24 @@ class Algorithm:
             for _ in tqdm(range(months_back - 1)):
                 curr_date += relativedelta(months=1)
 
+                # get the current price of each current holding
                 price_coros = []
                 for ticker_name in holdings.keys():
                     price_coros.append(client.get_price(ticker_name, curr_date))
                 prices = await asyncio.gather(*price_coros)
 
+                # calculate current value of the portfolio
                 portfolio_value = 0
                 for ticker, price in zip(tickers, prices):
                     portfolio_value += holdings[ticker.name] * price
                 portfolio_values.append(portfolio_value)
 
+                # get stocks to buy for this period
                 tickers = await self._rank_tickers(
                     await self._get_ticker_dates(client, curr_date), num_stocks
                 )
+
+                # update holdings
                 holdings = {}
                 capital_per_stock = portfolio_values[-1] / num_stocks
                 for ticker in tickers:
