@@ -61,6 +61,8 @@ class TickerDate:
                 Preferrably the same client across all TickerDates
                 so multiple client sessions are not open.
         """
+        if self.synced:
+            return
 
         financials, price = await asyncio.gather(
             client.get_financials(self.ticker.name, self.query_date),
