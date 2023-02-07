@@ -1,7 +1,6 @@
-import asyncio
 from datetime import date
 
-from backtester.async_polygon import AsyncPolygon, StockFinancial
+from polygon.rest.models.financials import StockFinancial
 
 
 class Ticker:
@@ -36,75 +35,38 @@ class TickerDate:
 
     query_date: date
     ticker: Ticker
-    synced: bool
-    _current_financials: StockFinancial
-    _last_financials: StockFinancial
-    _price: float
+    current_financials: StockFinancial
+    last_financials: StockFinancial
+    price: float
 
-    def __init__(self, ticker: Ticker, query_date: date) -> None:
+    def __init__(
+        self,
+        ticker: Ticker,
+        query_date: date,
+        current_financials: StockFinancial,
+        last_financials: StockFinancial,
+        price: float,
+    ) -> None:
         """
         Args:
             ticker (Ticker): ticker to pull data for
             query_date (datetime.date): date for which to pull data
+            current_financials (StockFinancial): most recent financial filing
+            last_financials (StockFinancial): previous financial filing
+            price (float): stock price on this date
 
         """
 
         self.ticker = ticker
         self.query_date = query_date
-        self.synced = False
-
-    async def sync(self, client: AsyncPolygon):
-        """
-        Synchronize ticker data (price, current_financials, last_financials) for indicated date
-        Args:
-            client (AsyncPolygon): AsyncPolygon client to use.
-                Preferrably the same client across all TickerDates
-                so multiple client sessions are not open.
-        """
-        if self.synced:
-            return
-
-        financials, price = await asyncio.gather(
-            client.get_financials(self.ticker.name, self.query_date),
-            client.get_price(self.ticker.name, self.query_date),
-        )
-
-        self._current_financials, self._last_financials = financials
-        self._price = price
-        self.synced = True
+        self.current_financials = current_financials
+        self.last_financials = last_financials
+        self.price = price
 
     @property
-    def price(self) -> float:
-        if not self.synced:
-            raise AttributeError("must sync TickerDate before accessing price")
-        return self._price
-
-    @property
-    def current_financials(self) -> StockFinancial:
-        if not self.synced:
-            raise AttributeError(
-                "must sync TickerDate before accessing current_financials"
-            )
-        return self._current_financials
-
-    @property
-    def last_financials(self) -> StockFinancial:
-        if not self.synced:
-            raise AttributeError(
-                "must sync TickerDate before accessing last_financials"
-            )
-        return self._last_financials
-
-    @property
-    def name(self) -> str:
+    def name(self):
         return self.ticker.name
 
     @property
-    def sector(self) -> str:
+    def sector(self):
         return self.ticker.sector
-
-    def __str__(self) -> str:
-        return f"{str(self.ticker)} on {self.query_date}"
-
-    def __repr__(self) -> str:
-        return f"TickerDate object({self.ticker} on {self.query_date})"

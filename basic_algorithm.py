@@ -4,6 +4,8 @@ import json
 
 
 class BasicAlgorithm(Algorithm):
+
+    # naively select the first 10 tickers
     async def select_tickers(self, ticker_dates: List[TickerDate]) -> List[TickerDate]:
         return ticker_dates[:10]
 

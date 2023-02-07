@@ -32,14 +32,14 @@ class Algorithm:
 
         self.tickers = [Ticker(symbol, sector) for symbol, sector in tickers]
 
-    def backtest(self, months_back: int = 12) -> list:
+    def backtest(self, months_back: int = 12) -> List[float]:
         """Synchronous method for calling the async backtest
 
         Args:
             months_back (int): how many months to run the backtest over
 
         Returns:
-            list: percentage of initial capital at each timestep
+            List[float]: percentage of initial capital at each timestep
         """
 
         # weird quirk needed to run on windows with no warnings
@@ -65,34 +65,40 @@ class Algorithm:
         self, client: AsyncPolygon, query_date: date
     ) -> List[TickerDate]:
 
-        coros = []
-        ticker_dates = []
+        """Get TickerDate objects for all considered tickers on a specific query date
 
+        Args:
+            client (AsyncPolygon): the AsyncPolygon client to use to make the requests to Polygon.io
+            query_date (date): the date for which to query necessary data for
+        Returns:
+            List[TickerDate]: a list of all tickers for which required data was found for the specified query date
+
+        """
+
+        td_coros = []
         for ticker in self.tickers:
-            ticker_date = TickerDate(ticker, query_date)
-            ticker_dates.append(ticker_date)
-            coros.append(ticker_date.sync(client))
+            td_coros.append(client.get_ticker_date(ticker, query_date))
 
         results = []
-        exceptions = await asyncio.gather(*coros, return_exceptions=True)
-        for exception, td in zip(exceptions, ticker_dates):
-            if exception is None:
-                results.append(td)
+        ticker_dates = await asyncio.gather(*td_coros, return_exceptions=True)
+        for td in ticker_dates:
+            if isinstance(td, Exception):
+                self.logger.info(td)
             else:
-                self.logger.info(
-                    f"could not retreive info for {td.ticker.name} on {query_date}"
-                )
+                results.append(td)
 
         return results
 
-    async def _backtest(self, months_back: int) -> List[List[TickerDate]]:
+    async def _backtest(self, months_back: int) -> List[float]:
 
         async with AsyncPolygon(self.API_KEY) as client:
 
             # gather all ticker data needed for backtest
             curr_date = date.today() - relativedelta(months=months_back)
-            data = []  # type: List[Dict[str, TickerDate]]
-            data_lookup = []
+            data = []  # type: List[TickerDate]
+
+            # allows for lookup of a specific TickerDate for a specific timeslice by Ticker name
+            data_lookup = []  # type: List[Dict[str, TickerDate]]
             for _ in tqdm(range(months_back)):
                 lookup = {}
                 ticker_dates = await self._get_ticker_dates(client, curr_date)
@@ -108,7 +114,9 @@ class Algorithm:
         portfolio_values = [1.0]
         for i in range(months_back - 1):
 
+            # get selected tickers for the current time slice
             tickers = await self.select_tickers(data[i])
+
             # calculate holdings for current time period
             holdings = {}
             capital_per_stock = portfolio_values[-1] / len(tickers)

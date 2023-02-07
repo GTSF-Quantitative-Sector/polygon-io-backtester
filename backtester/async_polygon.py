@@ -2,8 +2,9 @@ import aiohttp
 import concurrent
 from datetime import date, timedelta
 from typing import Tuple, Optional
+import asyncio
 
-from polygon.rest.models.financials import StockFinancial
+from backtester.ticker_date import TickerDate, Ticker, StockFinancial
 
 
 class AsyncPolygon:
@@ -23,6 +24,16 @@ class AsyncPolygon:
         self.session = None
         self.timeout = timeout
         self.active = False
+
+    async def get_ticker_date(self, ticker: Ticker, query_date: date) -> TickerDate:
+        financials, price = await asyncio.gather(
+            self.get_financials(ticker.name, query_date),
+            self.get_price(ticker.name, query_date),
+        )
+        current_financials, last_financials = financials
+        return TickerDate(
+            ticker, query_date, current_financials, last_financials, price
+        )
 
     async def get_financials(
         self, ticker: str, query_date: Optional[date] = None
@@ -50,7 +61,6 @@ class AsyncPolygon:
         URL += f"&apiKey={self.api_key}&ticker={ticker}&limit=2&period_of_report_date.lte={str_query_date}"
         try:
             async with self.session.get(URL, timeout=self.timeout) as resp:
-                self.count += 1
                 response = await resp.json()
         except concurrent.futures.TimeoutError:
             raise TimeoutError(
@@ -83,7 +93,6 @@ class AsyncPolygon:
             url = f"/v2/aggs/ticker/{ticker}/prev?adjusted=true&apiKey={self.api_key}"
             try:
                 async with self.session.get(url, timeout=self.timeout) as resp:
-                    self.count += 1
                     response = await resp.json()
                     return response["results"][0]["c"]
             except concurrent.futures.TimeoutError:
@@ -93,7 +102,6 @@ class AsyncPolygon:
             url = f"/v1/open-close/{ticker}/{str_query_date}?adjusted=true&apiKey={self.api_key}"
             try:
                 async with self.session.get(url, timeout=self.timeout) as resp:
-                    self.count += 1
                     response = await resp.json()
             except concurrent.futures.TimeoutError:
                 raise TimeoutError(f"{ticker}: Timed out while retrieving price")
@@ -112,7 +120,6 @@ class AsyncPolygon:
                 url = f"/v1/open-close/{ticker}/{str_query_date}?adjusted=true&apiKey={self.api_key}"
                 try:
                     async with self.session.get(url, timeout=self.timeout) as resp:
-                        self.count += 1
                         response = await resp.json()
                 except concurrent.futures.TimeoutError:
                     raise TimeoutError(f"{ticker}: Timed out while retrieving price")
@@ -120,12 +127,10 @@ class AsyncPolygon:
             return response["close"]
 
     async def __aenter__(self):
-        self.count = 0
         self.session = aiohttp.ClientSession("https://api.polygon.io")
         self.active = True
         return self
 
     async def __aexit__(self, *args):
-        print(self.count)
         await self.session.close()
         self.active = False
