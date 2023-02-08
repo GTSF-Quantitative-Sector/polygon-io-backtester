@@ -17,18 +17,25 @@ KEY="API Key here"
 ```
 
 ## Quick Example
-A new algorithm is definied by extending the Algorithm class and implementing the score method. The score method takes two `StockFinancial` objects, defined by the Polygon.io Python client [here](https://github.com/polygon-io/client-python/blob/master/polygon/rest/models/financials.py#L294), to represent the current and last financial statements, and the current price. The method is async, which can be leveraged to optimize the backtest if the user needs to pull in any additional information from other sources
+A new algorithm is definied by extending the Algorithm class and implementing the select_tickers method. The select_tickers method takes in a list of TickerDate objects, which contain information for a specific ticker for a specific date. In this case, the list of TickerDate objects represents all of the considered tickers for a specific timeslice, as well as their relevant data as object attributes. These object attributes include current_financials and last_financials, StockFinancial objects from the existing official Polygon.io Python client, as well as the price of the ticker. The method is async, which can be leveraged to optimize the backtest if the user needs to pull in any additional information from other sources
 ```
-from backtester import Algorithm, StockFinancial
+from backtester import Algorithm, TickerDate
+from typing import List
+import json
 
 
 class BasicAlgorithm(Algorithm):
 
-    async def score(self, current_financials: StockFinancial, last_financials: StockFinancial, current_price: float):
-        # rank tickers by current earnings per share
-        return current_financials.financials.income_statement.basic_earnings_per_share.value
+    # naively select the first 10 tickers
+    async def select_tickers(self, ticker_dates: List[TickerDate]) -> List[TickerDate]:
+        return ticker_dates[:10]
+
 
 if __name__ == "__main__":
-    algo = BasicAlgorithm(verbose=True)
+
+    with open("data/sp500.json", "r") as f:
+        tickers_and_sectors = json.load(f)
+
+    algo = BasicAlgorithm(tickers_and_sectors)
     print(algo.backtest())
 ```
