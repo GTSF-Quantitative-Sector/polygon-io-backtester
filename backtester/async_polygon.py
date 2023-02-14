@@ -1,13 +1,13 @@
-import aiohttp
-import concurrent
-from datetime import date, timedelta
-from typing import Tuple, Optional
 import asyncio
+from datetime import date, timedelta
+from typing import Any, Optional, Tuple
 
-from backtester.ticker_date import TickerDate, Ticker, StockFinancial
+import aiohttp
+
+from backtester.ticker_date import StockFinancial, Ticker, TickerDate
 
 
-class AsyncPolygon:
+class Client:
     """
     Class for interacting with the Polygon.io REST API in an asynchronous fashion
     """
@@ -26,6 +26,14 @@ class AsyncPolygon:
         self.active = False
 
     async def get_ticker_date(self, ticker: Ticker, query_date: date) -> TickerDate:
+        """Get ticker date for specified ticker and query_date
+
+        Args:
+            ticker (Ticker): ticker that is being queried
+            query_date (date): date that is being queried
+        Returns:
+            TickerDate: Ticker and associated data for a given date
+        """
         financials, price = await asyncio.gather(
             self.get_financials(ticker.name, query_date),
             self.get_price(ticker.name, query_date),
@@ -57,15 +65,15 @@ class AsyncPolygon:
 
         str_query_date = query_date.strftime("%Y-%m-%d")
 
-        URL = "/vX/reference/financials?sort=filing_date"
-        URL += f"&apiKey={self.api_key}&ticker={ticker}&limit=2&period_of_report_date.lte={str_query_date}"
+        url = "/vX/reference/financials?sort=filing_date"
+        url += f"&apiKey={self.api_key}&ticker={ticker}&limit=2&period_of_report_date.lte={str_query_date}"
         try:
-            async with self.session.get(URL, timeout=self.timeout) as resp:
+            async with self.session.get(url, timeout=self.timeout) as resp:
                 response = await resp.json()
-        except concurrent.futures.TimeoutError:
+        except asyncio.exceptions.TimeoutError as exc:
             raise TimeoutError(
                 f"{ticker}: Timed out while retrieving company financials"
-            )
+            ) from exc
 
         if response["status"] == "OK":
             return StockFinancial.from_dict(
@@ -95,16 +103,20 @@ class AsyncPolygon:
                 async with self.session.get(url, timeout=self.timeout) as resp:
                     response = await resp.json()
                     return response["results"][0]["c"]
-            except concurrent.futures.TimeoutError:
-                raise TimeoutError(f"{ticker}: Timed out while retrieving price")
+            except asyncio.exceptions.TimeoutError as exc:
+                raise TimeoutError(
+                    f"{ticker}: Timed out while retrieving price"
+                ) from exc
         else:
             str_query_date = query_date.strftime("%Y-%m-%d")
             url = f"/v1/open-close/{ticker}/{str_query_date}?adjusted=true&apiKey={self.api_key}"
             try:
                 async with self.session.get(url, timeout=self.timeout) as resp:
                     response = await resp.json()
-            except concurrent.futures.TimeoutError:
-                raise TimeoutError(f"{ticker}: Timed out while retrieving price")
+            except asyncio.exceptions.TimeoutError as exc:
+                raise TimeoutError(
+                    f"{ticker}: Timed out while retrieving price"
+                ) from exc
 
             i = 0
             while response["status"] != "OK":
@@ -121,8 +133,10 @@ class AsyncPolygon:
                 try:
                     async with self.session.get(url, timeout=self.timeout) as resp:
                         response = await resp.json()
-                except concurrent.futures.TimeoutError:
-                    raise TimeoutError(f"{ticker}: Timed out while retrieving price")
+                except asyncio.exceptions.TimeoutError as exc:
+                    raise TimeoutError(
+                        f"{ticker}: Timed out while retrieving price"
+                    ) from exc
 
             return response["close"]
 
@@ -131,6 +145,7 @@ class AsyncPolygon:
         self.active = True
         return self
 
-    async def __aexit__(self, *args):
+    async def __aexit__(self, *args: Tuple[Any]):
+        assert self.session is not None
         await self.session.close()
         self.active = False

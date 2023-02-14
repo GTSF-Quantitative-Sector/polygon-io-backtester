@@ -1,19 +1,21 @@
 import asyncio
-from datetime import date
-from dateutil.relativedelta import relativedelta
 import logging
 import os
+from datetime import date
+from typing import Any, Coroutine, Dict, List, Tuple
+
+from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
-from typing import List, Tuple, Dict
 
 import backtester.config
-from backtester.async_polygon import AsyncPolygon
+from backtester import async_polygon
 from backtester.ticker_date import Ticker, TickerDate
 
 # TODO: Backtest report creation
 
 
 class Algorithm:
+    """Algorithm base class to extend in order to run backtest"""
 
     API_KEY = backtester.config.KEY
 
@@ -53,7 +55,7 @@ class Algorithm:
         """Specify which tickers to buy in a certain timeslice
 
         Args:
-            ticker_dates (List[TickerDate]): a list of all tickers to consider and their associated data
+            ticker_dates (List[TickerDate]): a list of tickers to consider and their associated data
         Returns:
             List[TickerDate]: A list of tickers which have been selected to buy for this timeslice
         """
@@ -62,24 +64,24 @@ class Algorithm:
         )
 
     async def _get_ticker_dates(
-        self, client: AsyncPolygon, query_date: date
+        self, client: async_polygon.Client, query_date: date
     ) -> List[TickerDate]:
 
         """Get TickerDate objects for all considered tickers on a specific query date
 
         Args:
-            client (AsyncPolygon): the AsyncPolygon client to use to make the requests to Polygon.io
+            client (async_polygon.Client): the async_polygon client to use to make the requests to Polygon.io
             query_date (date): the date for which to query necessary data for
         Returns:
-            List[TickerDate]: a list of all tickers for which required data was found for the specified query date
+            List[TickerDate]: a list of tickers for which required data was found for the specified query date
 
         """
 
-        td_coros = []
+        td_coros: List[Coroutine[Any, Any, TickerDate]] = []
         for ticker in self.tickers:
             td_coros.append(client.get_ticker_date(ticker, query_date))
 
-        results = []
+        results: List[TickerDate] = []
         ticker_dates = await asyncio.gather(*td_coros, return_exceptions=True)
         for td in ticker_dates:
             if isinstance(td, Exception):
@@ -91,14 +93,14 @@ class Algorithm:
 
     async def _backtest(self, months_back: int) -> List[float]:
 
-        async with AsyncPolygon(self.API_KEY) as client:
+        async with async_polygon.Client(self.API_KEY) as client:
 
             # gather all ticker data needed for backtest
             curr_date = date.today() - relativedelta(months=months_back)
-            data = []  # type: List[TickerDate]
+            data: List[List[TickerDate]] = []
 
             # allows for lookup of a specific TickerDate for a specific timeslice by Ticker name
-            data_lookup = []  # type: List[Dict[str, TickerDate]]
+            data_lookup: List[Dict[str, TickerDate]] = []
             for _ in tqdm(range(months_back)):
                 lookup = {}
                 ticker_dates = await self._get_ticker_dates(client, curr_date)
@@ -124,12 +126,12 @@ class Algorithm:
                 holdings[ticker.name] = capital_per_stock / ticker.price
 
             # get the price of each selected ticker for next time period
-            prices = []
+            prices: List[float] = []
             for td in tickers:
                 prices.append(data_lookup[i + 1][td.name].price)
 
             # calculate the value of the portfolio at the next time period
-            portfolio_value = 0
+            portfolio_value: float = 0.0
             for ticker, price in zip(tickers, prices):
                 portfolio_value += holdings[ticker.name] * price
             portfolio_values.append(portfolio_value)

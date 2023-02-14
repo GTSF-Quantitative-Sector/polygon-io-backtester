@@ -1,6 +1,7 @@
+import json
+
 import pytest
 from asyncmock import AsyncMock, MagicMock
-import json
 
 
 class MockContextManager:
