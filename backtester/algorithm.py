@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 import backtester.config
 from backtester import async_polygon
-from backtester.ticker_date import Ticker, TickerDate
+from backtester.models import Ticker, TickerDate, Trade
 
 # TODO: Backtest report creation
 
@@ -34,7 +34,7 @@ class Algorithm:
 
         self.tickers = [Ticker(symbol, sector) for symbol, sector in tickers]
 
-    def backtest(self, months_back: int = 12) -> List[float]:
+    def backtest(self, months_back: int = 12) -> List[List[Trade]]:
         """Synchronous method for calling the async backtest
 
         Args:
@@ -91,7 +91,7 @@ class Algorithm:
 
         return results
 
-    async def _backtest(self, months_back: int) -> List[float]:
+    async def _backtest(self, months_back: int) -> List[List[Trade]]:
 
         async with async_polygon.Client(self.API_KEY) as client:
 
@@ -113,27 +113,20 @@ class Algorithm:
 
         # calculate portfolio values
         # portfolio starts with 100% value
-        portfolio_values = [1.0]
+        all_trades: List[List[Trade]] = []
         for i in range(months_back - 1):
+            # List of Trades for this timeslice
+            current_trades: List[Trade] = []
 
-            # get selected tickers for the current time slice
-            tickers = await self.select_tickers(data[i])
-
-            # calculate holdings for current time period
-            holdings = {}
-            capital_per_stock = portfolio_values[-1] / len(tickers)
-            for ticker in tickers:
-                holdings[ticker.name] = capital_per_stock / ticker.price
+            # get selected tickers to buy for the current time slice
+            buy_tickers = await self.select_tickers(data[i])
 
             # get the price of each selected ticker for next time period
-            prices: List[float] = []
-            for td in tickers:
-                prices.append(data_lookup[i + 1][td.name].price)
+            for buy_ticker in buy_tickers:
+                sell_ticker = data_lookup[i + 1][buy_ticker.name]
+                t = Trade(buy_ticker, sell_ticker)
+                current_trades.append(t)
 
-            # calculate the value of the portfolio at the next time period
-            portfolio_value: float = 0.0
-            for ticker, price in zip(tickers, prices):
-                portfolio_value += holdings[ticker.name] * price
-            portfolio_values.append(portfolio_value)
+            all_trades.append(current_trades)
 
-        return portfolio_values
+        return all_trades

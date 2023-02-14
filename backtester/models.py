@@ -16,9 +16,6 @@ class Ticker:
     def __str__(self) -> str:
         return f"{self.name}({self.sector})"
 
-    def __repr__(self) -> str:
-        return f"Ticker object({self.name} {self.sector})"
-
 
 @dataclass
 class TickerDate:
@@ -42,3 +39,9 @@ class TickerDate:
     def sector(self) -> str:
         """Ticker sector"""
         return self.ticker.sector
+
+
+@dataclass
+class Trade:
+    buy_ticker_date: TickerDate
+    sell_ticker_date: TickerDate

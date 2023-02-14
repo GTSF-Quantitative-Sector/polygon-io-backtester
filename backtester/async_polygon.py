@@ -4,7 +4,7 @@ from typing import Any, Optional, Tuple
 
 import aiohttp
 
-from backtester.ticker_date import StockFinancial, Ticker, TickerDate
+from backtester.models import StockFinancial, Ticker, TickerDate
 
 
 class Client:
