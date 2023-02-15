@@ -10,6 +10,7 @@ from tqdm import tqdm
 import backtester.config
 from backtester import async_polygon
 from backtester.models import Ticker, TickerDate, Trade
+from backtester.report import Report
 
 # TODO: Backtest report creation
 
@@ -34,7 +35,7 @@ class Algorithm:
 
         self.tickers = [Ticker(symbol, sector) for symbol, sector in tickers]
 
-    def backtest(self, months_back: int = 12) -> List[List[Trade]]:
+    def backtest(self, months_back: int = 12) -> Report:
         """Synchronous method for calling the async backtest
 
         Args:
@@ -44,12 +45,11 @@ class Algorithm:
             List[float]: percentage of initial capital at each timestep
         """
 
-        # weird quirk needed to run on windows with no warnings
+        # needed to run on windows with no warnings
         if os.name == "nt":
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-        self.logger.debug("Beginning backtest")
-        return asyncio.run(self._backtest(months_back))
+        return Report(asyncio.run(self._backtest(months_back)))
 
     async def select_tickers(self, ticker_dates: List[TickerDate]) -> List[TickerDate]:
         """Specify which tickers to buy in a certain timeslice

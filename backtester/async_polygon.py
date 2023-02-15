@@ -70,17 +70,20 @@ class Client:
         try:
             async with self.session.get(url, timeout=self.timeout) as resp:
                 response = await resp.json()
-        except asyncio.exceptions.TimeoutError as exc:
+        except asyncio.TimeoutError as exc:
             raise TimeoutError(
                 f"{ticker}: Timed out while retrieving company financials"
             ) from exc
 
         if response["status"] == "OK":
+            if len(response["results"]) == 0:
+                raise ValueError(f"{ticker}: No financials found")
+
             return StockFinancial.from_dict(
                 response["results"][0]
             ), StockFinancial.from_dict(response["results"][1])
 
-        raise ValueError("Failed to retrieve company financials")
+        raise ValueError(f"{ticker}: Failed to retrieve company financials")
 
     async def get_price(self, ticker: str, query_date: Optional[date] = None) -> float:
         """
@@ -103,7 +106,7 @@ class Client:
                 async with self.session.get(url, timeout=self.timeout) as resp:
                     response = await resp.json()
                     return response["results"][0]["c"]
-            except asyncio.exceptions.TimeoutError as exc:
+            except asyncio.TimeoutError as exc:
                 raise TimeoutError(
                     f"{ticker}: Timed out while retrieving price"
                 ) from exc
@@ -113,7 +116,7 @@ class Client:
             try:
                 async with self.session.get(url, timeout=self.timeout) as resp:
                     response = await resp.json()
-            except asyncio.exceptions.TimeoutError as exc:
+            except asyncio.TimeoutError as exc:
                 raise TimeoutError(
                     f"{ticker}: Timed out while retrieving price"
                 ) from exc
@@ -133,7 +136,7 @@ class Client:
                 try:
                     async with self.session.get(url, timeout=self.timeout) as resp:
                         response = await resp.json()
-                except asyncio.exceptions.TimeoutError as exc:
+                except asyncio.TimeoutError as exc:
                     raise TimeoutError(
                         f"{ticker}: Timed out while retrieving price"
                     ) from exc
