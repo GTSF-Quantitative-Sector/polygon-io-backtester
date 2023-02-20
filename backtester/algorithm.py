@@ -77,6 +77,8 @@ class Algorithm:
 
         """
 
+        # TODO: Exception handling
+
         td_coros: List[Coroutine[Any, Any, TickerDate]] = []
         for ticker in self.tickers:
             td_coros.append(client.get_ticker_date(ticker, query_date))

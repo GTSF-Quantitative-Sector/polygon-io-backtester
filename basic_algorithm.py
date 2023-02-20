@@ -16,5 +16,5 @@ if __name__ == "__main__":
     with open("data/sp500.json", "r") as f:
         tickers_and_sectors = json.load(f)
 
-    algo = BasicAlgorithm(tickers_and_sectors, verbose=True)
+    algo = BasicAlgorithm(tickers_and_sectors)
     print(algo.backtest())

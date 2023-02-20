@@ -4,7 +4,7 @@ from datetime import date
 from polygon.rest.models.financials import StockFinancial
 
 
-@dataclass
+@dataclass(frozen=True)
 class Ticker:
     """
     Hold the name and sector of a ticker in a singular class
@@ -17,7 +17,7 @@ class Ticker:
         return f"{self.name}({self.sector})"
 
 
-@dataclass
+@dataclass(frozen=True)
 class TickerDate:
     """
     Class to contain information for a ticker on a specific date.

@@ -96,6 +96,8 @@ class Client:
             float: Price of the stock on the given date.
         """
 
+        # TODO: Handle unknown api key
+
         if self.session is None:
             raise RuntimeError("must use async context manager to initialize client")
 
@@ -126,7 +128,7 @@ class Client:
                 # markets will not close for more than 3 days at a time
                 # if price not found within 3 days, price likely does not exist for that time period
                 if i >= 2:
-                    raise ValueError(f"Could not find price for {ticker}")
+                    raise ValueError(f"Could not find   ce for {ticker}")
 
                 i += 1
                 query_date -= timedelta(days=1)
@@ -144,7 +146,9 @@ class Client:
             return response["close"]
 
     async def __aenter__(self):
-        self.session = aiohttp.ClientSession("https://api.polygon.io")
+        self.session = aiohttp.ClientSession(
+            "https://api.polygon.io", connector=aiohttp.TCPConnector(verify_ssl=False)
+        )
         self.active = True
         return self
 

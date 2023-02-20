@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 from polygon.rest.models.financials import StockFinancial
 
-from backtester.async_polygon import AsyncPolygon
+from backtester import async_polygon
 from backtester.config import KEY
 from tests.fixtures.aiohttp_fixtures import (
     mock_aiohttp_financials_failed,
@@ -18,7 +18,7 @@ from tests.fixtures.aiohttp_fixtures import (
 @pytest.mark.asyncio
 async def test_aenter_aexit():
     temp = None
-    async with AsyncPolygon(KEY, timeout=10) as client:
+    async with async_polygon.Client(KEY, timeout=10) as client:
         assert client.active
         assert client.timeout == 10
         temp = client
@@ -28,7 +28,7 @@ async def test_aenter_aexit():
 
 @pytest.mark.asyncio
 async def test_get_financials_timeout(mock_aiohttp_timeout):
-    async with AsyncPolygon(KEY) as client:
+    async with async_polygon.Client(KEY) as client:
         assert client.session is not None
         await client.session.close()
         client.session = mock_aiohttp_timeout
@@ -39,7 +39,7 @@ async def test_get_financials_timeout(mock_aiohttp_timeout):
 
 @pytest.mark.asyncio
 async def test_get_financials_success(mock_aiohttp_financials_success):
-    async with AsyncPolygon(KEY) as client:
+    async with async_polygon.Client(KEY) as client:
         assert client.session is not None
         await client.session.close()
         client.session = mock_aiohttp_financials_success
@@ -58,7 +58,7 @@ async def test_get_financials_success(mock_aiohttp_financials_success):
 
 @pytest.mark.asyncio
 async def test_get_financials_failed(mock_aiohttp_financials_failed):
-    async with AsyncPolygon(KEY) as client:
+    async with async_polygon.Client(KEY) as client:
         assert client.session is not None
         await client.session.close()
         client.session = mock_aiohttp_financials_failed
@@ -69,7 +69,7 @@ async def test_get_financials_failed(mock_aiohttp_financials_failed):
 
 @pytest.mark.asyncio
 async def test_get_price_today(mock_aiohttp_get_price_today):
-    async with AsyncPolygon(KEY) as client:
+    async with async_polygon.Client(KEY) as client:
         assert client.session is not None
         await client.session.close()
         client.session = mock_aiohttp_get_price_today
@@ -86,7 +86,7 @@ async def test_get_price_today(mock_aiohttp_get_price_today):
 
 @pytest.mark.asyncio
 async def test_get_price_timeouts(mock_aiohttp_timeout):
-    async with AsyncPolygon(KEY) as client:
+    async with async_polygon.Client(KEY) as client:
         assert client.session is not None
         await client.session.close()
         client.session = mock_aiohttp_timeout
@@ -99,7 +99,7 @@ async def test_get_price_timeouts(mock_aiohttp_timeout):
 
 @pytest.mark.asyncio
 async def test_get_price_past(mock_aiohttp_get_price_past):
-    async with AsyncPolygon(KEY) as client:
+    async with async_polygon.Client(KEY) as client:
         assert client.session is not None
         await client.session.close()
         client.session = mock_aiohttp_get_price_past
@@ -111,7 +111,7 @@ async def test_get_price_past(mock_aiohttp_get_price_past):
 
 @pytest.mark.asyncio
 async def test_get_price_value_error(mock_aiohttp_get_price_value_error):
-    async with AsyncPolygon(KEY) as client:
+    async with async_polygon.Client(KEY) as client:
         assert client.session is not None
         await client.session.close()
         client.session = mock_aiohttp_get_price_value_error
