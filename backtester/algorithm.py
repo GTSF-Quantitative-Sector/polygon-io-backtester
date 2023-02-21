@@ -51,7 +51,9 @@ class Algorithm:
 
         return Report(asyncio.run(self._backtest(months_back)))
 
-    async def select_tickers(self, ticker_dates: List[TickerDate]) -> List[TickerDate]:
+    async def select_tickers(
+        self, ticker_dates: List[TickerDate]
+    ) -> List[Tuple[TickerDate, float]]:
         """Specify which tickers to buy in a certain timeslice
 
         Args:
@@ -121,12 +123,12 @@ class Algorithm:
             current_trades: List[Trade] = []
 
             # get selected tickers to buy for the current time slice
-            buy_tickers = await self.select_tickers(data[i])
+            ticker_quantities = await self.select_tickers(data[i])
 
             # get the price of each selected ticker for next time period
-            for buy_ticker in buy_tickers:
+            for buy_ticker, quantity in ticker_quantities:
                 sell_ticker = data_lookup[i + 1][buy_ticker.name]
-                t = Trade(buy_ticker, sell_ticker)
+                t = Trade(buy_ticker, sell_ticker, quantity)
                 current_trades.append(t)
 
             all_trades.append(current_trades)
