@@ -4,7 +4,11 @@ from typing import Any, Optional, Tuple
 
 import aiohttp
 
-from backtester.exceptions import InvalidAPIKeyError
+from backtester.exceptions import (
+    FinancialsNotFoundError,
+    InvalidAPIKeyError,
+    PriceNotFoundError,
+)
 from backtester.models import StockFinancial, Ticker, TickerDate
 
 
@@ -78,13 +82,19 @@ class Client:
 
         if response["status"] == "OK":
             if len(response["results"]) < 2:
-                raise ValueError(f"{ticker}: Could not find company financials ")
+                raise FinancialsNotFoundError(
+                    f"{ticker}: Could not find company financials "
+                )
 
             return StockFinancial.from_dict(
                 response["results"][0]
             ), StockFinancial.from_dict(response["results"][1])
+        elif response["status"] == "ERROR" and response["error"] == "Unknown API Key":
+            raise InvalidAPIKeyError("Invalid API Key Provided")
 
-        raise ValueError(f"{ticker}: Failed to retrieve company financials: {response}")
+        raise FinancialsNotFoundError(
+            f"{ticker}: Failed to retrieve company financials: {response}"
+        )
 
     async def get_price(self, ticker: str, query_date: Optional[date] = None) -> float:
         """
@@ -112,7 +122,7 @@ class Client:
                     if response["status"] == "ERROR":
                         if response["error"] == "Unknown API Key":
                             raise InvalidAPIKeyError("Invalid API Key Provided")
-                        raise ValueError(response["error"])
+                        raise PriceNotFoundError(response["error"])
 
                     return response["results"][0]["c"]
             except asyncio.TimeoutError as exc:
@@ -138,7 +148,9 @@ class Client:
                 # markets will most likely not close for more than 4 days at a time
                 # if price not found within 4 days, price likely does not exist for that time period
                 if i > 4:
-                    raise ValueError(f"Could not find price for {ticker}: {response}")
+                    raise PriceNotFoundError(
+                        f"Could not find price for {ticker}: {response}"
+                    )
 
                 i += 1
                 query_date -= timedelta(days=1)

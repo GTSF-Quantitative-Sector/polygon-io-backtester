@@ -9,7 +9,11 @@ from tqdm import tqdm
 
 import backtester.config
 from backtester import async_polygon
-from backtester.exceptions import InvalidAPIKeyError
+from backtester.exceptions import (
+    FinancialsNotFoundError,
+    InvalidAPIKeyError,
+    PriceNotFoundError,
+)
 from backtester.models import Ticker, TickerDate, Trade
 from backtester.report import Report
 
@@ -89,7 +93,9 @@ class Algorithm:
         results: List[TickerDate] = []
         ticker_dates = await asyncio.gather(*td_coros, return_exceptions=True)
         for td in ticker_dates:
-            if isinstance(td, ValueError):
+            if isinstance(td, PriceNotFoundError):
+                self.logger.info(td)
+            elif isinstance(td, FinancialsNotFoundError):
                 self.logger.info(td)
             elif isinstance(td, Exception):
                 raise td
