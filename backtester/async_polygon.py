@@ -4,6 +4,7 @@ from typing import Any, Optional, Tuple
 
 import aiohttp
 
+from backtester.exceptions import InvalidAPIKeyError
 from backtester.models import StockFinancial, Ticker, TickerDate
 
 
@@ -14,7 +15,7 @@ class Client:
 
     session: Optional[aiohttp.ClientSession]
 
-    def __init__(self, api_key: str, timeout: Optional[float] = 10):
+    def __init__(self, api_key: str, timeout: Optional[float] = 20):
         """
         Args:
             api_key (str): the Polygon.io API key to use
@@ -57,8 +58,8 @@ class Client:
             (StockFinancial, StockFinancial): the most recent financial filing, the previous financial filing
         """
 
-        if self.session is None:
-            raise RuntimeError("must use async context manager to initialize client")
+        if self.session is None or not self.active:
+            raise TypeError("must use async context manager to initialize client")
 
         if query_date is None:
             query_date = date.today()
@@ -76,14 +77,14 @@ class Client:
             ) from exc
 
         if response["status"] == "OK":
-            if len(response["results"]) == 0:
-                raise ValueError(f"{ticker}: No financials found")
+            if len(response["results"]) < 2:
+                raise ValueError(f"{ticker}: Could not find company financials ")
 
             return StockFinancial.from_dict(
                 response["results"][0]
             ), StockFinancial.from_dict(response["results"][1])
 
-        raise ValueError(f"{ticker}: Failed to retrieve company financials")
+        raise ValueError(f"{ticker}: Failed to retrieve company financials: {response}")
 
     async def get_price(self, ticker: str, query_date: Optional[date] = None) -> float:
         """
@@ -98,8 +99,8 @@ class Client:
 
         # TODO: Handle unknown api key
 
-        if self.session is None:
-            raise RuntimeError("must use async context manager to initialize client")
+        if self.session is None or not self.active:
+            raise TypeError("must use async context manager to initialize client")
 
         # use a different endpoint for current day and past prices
         if query_date is None or query_date == date.today():
@@ -107,6 +108,12 @@ class Client:
             try:
                 async with self.session.get(url, timeout=self.timeout) as resp:
                     response = await resp.json()
+
+                    if response["status"] == "ERROR":
+                        if response["error"] == "Unknown API Key":
+                            raise InvalidAPIKeyError("Invalid API Key Provided")
+                        raise ValueError(response["error"])
+
                     return response["results"][0]["c"]
             except asyncio.TimeoutError as exc:
                 raise TimeoutError(
@@ -123,12 +130,15 @@ class Client:
                     f"{ticker}: Timed out while retrieving price"
                 ) from exc
 
+            if response["status"] == "ERROR" and response["error"] == "Unknown API Key":
+                raise InvalidAPIKeyError("Invalid API Key Provided")
+
             i = 0
             while response["status"] != "OK":
-                # markets will not close for more than 3 days at a time
-                # if price not found within 3 days, price likely does not exist for that time period
-                if i >= 2:
-                    raise ValueError(f"Could not find   ce for {ticker}")
+                # markets will most likely not close for more than 4 days at a time
+                # if price not found within 4 days, price likely does not exist for that time period
+                if i > 4:
+                    raise ValueError(f"Could not find price for {ticker}: {response}")
 
                 i += 1
                 query_date -= timedelta(days=1)
