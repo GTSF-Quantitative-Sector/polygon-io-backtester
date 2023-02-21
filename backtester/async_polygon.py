@@ -91,7 +91,7 @@ class Client:
             ), StockFinancial.from_dict(response["results"][1])
         elif response["status"] == "ERROR" and response["error"] == "Unknown API Key":
             raise InvalidAPIKeyError(
-                f"Invalid API Key Provided: {response['request_id']}"
+                f"Invalid API Key Provided, request_id: {response['request_id']}"
             )
 
         raise FinancialsNotFoundError(
@@ -122,7 +122,7 @@ class Client:
                     if response["status"] == "ERROR":
                         if response["error"] == "Unknown API Key":
                             raise InvalidAPIKeyError(
-                                f"Invalid API Key Provided: {response['request_id']}"
+                                f"Invalid API Key Provided, request_id: {response['request_id']}"
                             )
                         raise PriceNotFoundError(response["error"])
 
@@ -144,7 +144,7 @@ class Client:
 
             if response["status"] == "ERROR" and response["error"] == "Unknown API Key":
                 raise InvalidAPIKeyError(
-                    f"Invalid API Key Provided: {response['request_id']}"
+                    f"Invalid API Key Provided, request_id: {response['request_id']}"
                 )
             elif response["status"] != "OK":
                 raise PriceNotFoundError(
