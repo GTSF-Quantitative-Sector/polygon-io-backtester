@@ -107,8 +107,6 @@ class Client:
             float: Price of the stock on the given date.
         """
 
-        # TODO: Handle unknown api key
-
         if self.session is None or not self.active:
             raise TypeError("must use async context manager to initialize client")
 
@@ -142,30 +140,19 @@ class Client:
 
             if response["status"] == "ERROR" and response["error"] == "Unknown API Key":
                 raise InvalidAPIKeyError("Invalid API Key Provided")
-
-            i = 0
-            while response["status"] != "OK":
-                # markets will most likely not close for more than 4 days at a time
-                # if price not found within 4 days, price likely does not exist for that time period
-                if i > 4:
-                    raise PriceNotFoundError(
-                        f"Could not find price for {ticker}: {response}"
-                    )
-
-                i += 1
-                query_date -= timedelta(days=1)
-                str_query_date = query_date.strftime("%Y-%m-%d")
-
-                url = f"/v1/open-close/{ticker}/{str_query_date}?adjusted=true&apiKey={self.api_key}"
-                try:
-                    async with self.session.get(url, timeout=self.timeout) as resp:
-                        response = await resp.json()
-                except asyncio.TimeoutError as exc:
-                    raise TimeoutError(
-                        f"{ticker}: Timed out while retrieving price"
-                    ) from exc
+            elif response["status"] != "OK":
+                raise PriceNotFoundError(
+                    f"Could not find price for {ticker}: {response}"
+                )
 
             return response["close"]
+
+    async def market_is_closed(self, query_date: date) -> bool:
+        try:
+            await self.get_price("KO", query_date)
+            return False
+        except PriceNotFoundError:
+            return True
 
     async def __aenter__(self):
         self.session = aiohttp.ClientSession(

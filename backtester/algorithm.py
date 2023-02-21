@@ -84,9 +84,12 @@ class Algorithm:
 
         """
 
-        # TODO: Exception handling
-
         td_coros: List[Coroutine[Any, Any, TickerDate]] = []
+
+        # ensure the market is open on the given day
+        while await client.market_is_closed(query_date):
+            query_date -= relativedelta(days=1)
+
         for ticker in self.tickers:
             td_coros.append(client.get_ticker_date(ticker, query_date))
 
