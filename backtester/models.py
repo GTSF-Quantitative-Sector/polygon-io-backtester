@@ -41,7 +41,7 @@ class TickerDate:
         return self.ticker.sector
 
     def __repr__(self) -> str:
-        return f"TickerDate(name: {self.name}, sector: {self.sector})"
+        return f"TickerDate(name: {self.name}, sector: {self.sector}, date: {self.query_date})"
 
 
 @dataclass
@@ -49,3 +49,6 @@ class Trade:
     buy_ticker_date: TickerDate
     sell_ticker_date: TickerDate
     quantity: float
+
+    def __repr__(self) -> str:
+        return f"Trade(buyTicker: {self.buy_ticker_date.__repr__()}, sellTicker: {self.sell_ticker_date.__repr__()})"
