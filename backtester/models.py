@@ -1,5 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
+from typing import List
 
 from polygon.rest.models.financials import StockFinancial
 
@@ -46,9 +47,20 @@ class TickerDate:
 
 @dataclass
 class Trade:
-    buy_ticker_date: TickerDate
-    sell_ticker_date: TickerDate
-    quantity: float
+    name: str
+    proportion_of_capital: float
+    start: date
+    end: date
 
-    def __repr__(self) -> str:
-        return f"Trade(buyTicker: {self.buy_ticker_date.__repr__()}, sellTicker: {self.sell_ticker_date.__repr__()})"
+
+@dataclass
+class TradeTimeSlice:
+    start: date
+    end: date
+    trades: List[Trade] = field(default_factory=list)
+
+    def add_trade(self, trade: Trade) -> None:
+        assert trade.start == self.start
+        assert trade.end == self.end
+
+        self.trades.append(trade)
