@@ -23,6 +23,4 @@ if __name__ == "__main__":
         tickers_and_sectors = json.load(f)
 
     algo = BasicAlgorithm(tickers_and_sectors, verbose=True)
-    frozen = jsonpickle.encode(algo.backtest())
-    with open("report.json", "w") as f:
-        f.write(str(frozen))
+    print(algo.backtest())
