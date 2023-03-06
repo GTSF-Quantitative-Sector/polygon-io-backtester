@@ -1,21 +1,20 @@
 import asyncio
 import logging
-import os
 from datetime import date
-from typing import Any, Coroutine, Dict, List, Tuple
+from typing import List, Tuple
 
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
 
-import backtester.config
-from backtester import async_polygon
-from backtester.exceptions import (
+from . import async_polygon
+from .config import KEY
+from .exceptions import (
     FinancialsNotFoundError,
-    InvalidAPIKeyError,
+    InvalidStockSelectionError,
     PriceNotFoundError,
 )
-from backtester.models import Ticker, TickerDate, Trade
-from backtester.report import Report
+from .models import Ticker, TickerDate, Trade, TradeTimeSlice
+from .report import Report
 
 # TODO: Backtest report creation
 
@@ -23,7 +22,7 @@ from backtester.report import Report
 class Algorithm:
     """Algorithm base class to extend in order to run backtest"""
 
-    API_KEY = backtester.config.KEY
+    API_KEY = KEY
 
     def __init__(self, tickers: List[Tuple[str, str]], verbose: bool = False):
         """Initialize a new Algorithm base class
@@ -50,10 +49,6 @@ class Algorithm:
             List[float]: percentage of initial capital at each timestep
         """
 
-        # needed to run on windows with no warnings
-        if os.name == "nt":
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
         return Report(asyncio.run(self._backtest(months_back)))
 
     async def select_tickers(
@@ -73,7 +68,6 @@ class Algorithm:
     async def _get_ticker_dates(
         self, client: async_polygon.Client, query_date: date
     ) -> List[TickerDate]:
-
         """Get TickerDate objects for all considered tickers on a specific query date
 
         Args:
@@ -84,18 +78,18 @@ class Algorithm:
 
         """
 
-        td_coros: List[Coroutine[Any, Any, TickerDate]] = []
-
         # ensure the market is open on the given day
         while await client.market_is_closed(query_date):
             query_date -= relativedelta(days=1)
 
+        td_tasks: List[asyncio.Task[TickerDate]] = []
         for ticker in self.tickers:
-            td_coros.append(client.get_ticker_date(ticker, query_date))
+            td_tasks.append(
+                asyncio.create_task(client.get_ticker_date(ticker, query_date))
+            )
 
         results: List[TickerDate] = []
-        ticker_dates = await asyncio.gather(*td_coros, return_exceptions=True)
-        for td in ticker_dates:
+        for td in await asyncio.gather(*td_tasks, return_exceptions=True):
             if isinstance(td, PriceNotFoundError):
                 self.logger.info(td)
             elif isinstance(td, FinancialsNotFoundError):
@@ -107,41 +101,45 @@ class Algorithm:
 
         return results
 
-    async def _backtest(self, months_back: int) -> List[List[Trade]]:
-
+    async def _backtest(self, months_back: int) -> List[TradeTimeSlice]:
         async with async_polygon.Client(self.API_KEY) as client:
-
             # gather all ticker data needed for backtest
             curr_date = date.today() - relativedelta(months=months_back)
             data: List[List[TickerDate]] = []
 
-            # allows for lookup of a specific TickerDate for a specific timeslice by Ticker name
-            data_lookup: List[Dict[str, TickerDate]] = []
             for _ in tqdm(range(months_back)):
-                lookup = {}
                 ticker_dates = await self._get_ticker_dates(client, curr_date)
                 data.append(ticker_dates)
-                for td in ticker_dates:
-                    lookup[td.name] = td
-
-                data_lookup.append(lookup)
                 curr_date += relativedelta(months=1)
 
-        # calculate portfolio values
-        # portfolio starts with 100% value
-        all_trades: List[List[Trade]] = []
+        all_trades: List[TradeTimeSlice] = []
         for i in range(months_back - 1):
+            start_date = data[i][0].query_date
+            end_date = data[i + 1][0].query_date
+
             # List of Trades for this timeslice
-            current_trades: List[Trade] = []
+            current_trades = TradeTimeSlice(start_date, end_date)
 
             # get selected tickers to buy for the current time slice
             ticker_quantities = await self.select_tickers(data[i])
 
             # get the price of each selected ticker for next time period
-            for buy_ticker, quantity in ticker_quantities:
-                sell_ticker = data_lookup[i + 1][buy_ticker.name]
-                t = Trade(buy_ticker, sell_ticker, quantity)
-                current_trades.append(t)
+            total_capital = 0
+            for buy_ticker, proportion_of_capital in ticker_quantities:
+                current_trades.add_trade(
+                    Trade(
+                        name=buy_ticker.name,
+                        proportion_of_capital=proportion_of_capital,
+                        start=buy_ticker.query_date,
+                        end=end_date,
+                    )
+                )
+                total_capital += proportion_of_capital
+
+            if total_capital > 1:
+                raise InvalidStockSelectionError(
+                    "Cannot allocate more than 100% of portfolio"
+                )
 
             all_trades.append(current_trades)
 

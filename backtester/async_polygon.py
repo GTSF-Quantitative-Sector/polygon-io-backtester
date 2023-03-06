@@ -1,15 +1,14 @@
 import asyncio
-from datetime import date, timedelta
+import ssl
+from datetime import date, datetime
 from typing import Any, Optional, Tuple
 
 import aiohttp
+import certifi
+import pandas as pd
 
-from backtester.exceptions import (
-    FinancialsNotFoundError,
-    InvalidAPIKeyError,
-    PriceNotFoundError,
-)
-from backtester.models import StockFinancial, Ticker, TickerDate
+from .exceptions import FinancialsNotFoundError, InvalidAPIKeyError, PriceNotFoundError
+from .models import StockFinancial, Ticker, TickerDate
 
 
 class Client:
@@ -29,6 +28,7 @@ class Client:
         self.session = None
         self.timeout = timeout
         self.active = False
+        self.ssl_context = ssl.create_default_context(cafile=certifi.where())
 
     async def get_ticker_date(self, ticker: Ticker, query_date: date) -> TickerDate:
         """Get ticker date for specified ticker and query_date
@@ -73,7 +73,9 @@ class Client:
         url = "/vX/reference/financials?sort=filing_date"
         url += f"&apiKey={self.api_key}&ticker={ticker}&limit=2&period_of_report_date.lte={str_query_date}"
         try:
-            async with self.session.get(url, timeout=self.timeout) as resp:
+            async with self.session.get(
+                url, timeout=self.timeout, ssl=self.ssl_context
+            ) as resp:
                 response = await resp.json()
         except asyncio.TimeoutError as exc:
             raise TimeoutError(
@@ -116,7 +118,9 @@ class Client:
         if query_date is None or query_date == date.today():
             url = f"/v2/aggs/ticker/{ticker}/prev?adjusted=true&apiKey={self.api_key}"
             try:
-                async with self.session.get(url, timeout=self.timeout) as resp:
+                async with self.session.get(
+                    url, timeout=self.timeout, ssl=self.ssl_context
+                ) as resp:
                     response = await resp.json()
 
                     if response["status"] == "ERROR":
@@ -135,7 +139,9 @@ class Client:
             str_query_date = query_date.strftime("%Y-%m-%d")
             url = f"/v1/open-close/{ticker}/{str_query_date}?adjusted=true&apiKey={self.api_key}"
             try:
-                async with self.session.get(url, timeout=self.timeout) as resp:
+                async with self.session.get(
+                    url, timeout=self.timeout, ssl=self.ssl_context
+                ) as resp:
                     response = await resp.json()
             except asyncio.TimeoutError as exc:
                 raise TimeoutError(
@@ -152,6 +158,36 @@ class Client:
                 )
 
             return response["close"]
+
+    async def get_daily_prices(
+        self, ticker: str, start_date: date, end_date: date
+    ) -> pd.Series:
+        if self.session is None or not self.active:
+            raise TypeError("must use async context manager to initialize client")
+
+        url = f"/v2/aggs/ticker/{ticker}/range/1/day/{start_date.strftime('%Y-%m-%d')}/{end_date.strftime('%Y-%m-%d')}?adjusted=true&sort=asc&apiKey={self.api_key}"
+        async with self.session.get(url) as resp:
+            response = await resp.json()
+
+        if response["status"] == "ERROR" and response["error"] == "Unknown API Key":
+            raise InvalidAPIKeyError(
+                f"Invalid API Key Provided, request_id: {response['request_id']}"
+            )
+
+        prices = {}
+        for result in response["results"]:
+            period = datetime.fromtimestamp(result["t"] / 1000).date()
+            prices[period] = result["c"]
+
+        while "next_urlstring" in response.keys():
+            async with self.session.get(response["next_urlstring"]) as resp:
+                response = await resp.json()
+
+            for result in response["results"]:
+                period = datetime.fromtimestamp(result["t"] / 1000).date()
+                prices[period] = result["c"]
+
+        return pd.Series(prices)
 
     async def market_is_closed(self, query_date: date) -> bool:
         try:
