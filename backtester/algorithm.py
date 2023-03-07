@@ -8,11 +8,8 @@ from tqdm import tqdm
 
 from . import async_polygon
 from .config import KEY
-from .exceptions import (
-    FinancialsNotFoundError,
-    InvalidStockSelectionError,
-    PriceNotFoundError,
-)
+from .exceptions import (FinancialsNotFoundError, InvalidStockSelectionError,
+                         PriceNotFoundError)
 from .models import Ticker, TickerDate, Trade, TradeTimeSlice
 from .report import Report
 
@@ -107,13 +104,14 @@ class Algorithm:
             curr_date = date.today() - relativedelta(months=months_back)
             data: List[List[TickerDate]] = []
 
-            for _ in tqdm(range(months_back)):
+            print("downloading data...")
+            for _ in tqdm(range(months_back + 1)):
                 ticker_dates = await self._get_ticker_dates(client, curr_date)
                 data.append(ticker_dates)
                 curr_date += relativedelta(months=1)
 
         all_trades: List[TradeTimeSlice] = []
-        for i in range(months_back - 1):
+        for i in range(months_back):
             start_date = data[i][0].query_date
             end_date = data[i + 1][0].query_date
 
