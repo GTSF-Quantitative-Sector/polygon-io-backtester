@@ -14,3 +14,8 @@ This project requires `wkhtmltopdf` to generate the PDF report.
 ```sudo apt-get install wkhtmltopdf```
 ### Windows
 In case you’re on Windows, you can download the installer [here](https://wkhtmltopdf.org/downloads.html).
+
+
+## PDF Generation
+
+PDF Generated using instructions from [here](https://towardsdatascience.com/how-to-easily-create-a-pdf-file-with-python-in-3-steps-a70faaf5bed5)
