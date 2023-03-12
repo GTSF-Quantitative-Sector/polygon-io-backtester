@@ -1,0 +1,189 @@
+<html>
+
+<head>
+    <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+    <style type="text/css">
+
+        .c8 {
+            padding-top: 0pt;
+            border-bottom-color: #000000;
+            border-bottom-width: 0.5pt;
+            padding-bottom: 1pt;
+            line-height: 1.0;
+            border-bottom-style: solid;
+            orphans: 2;
+            widows: 2;
+            text-align: left;
+            font-family: "Arial";
+        }
+
+        .c1 {
+            background-color: #ffffff;
+            padding-top: 0pt;
+            padding-bottom: 0pt;
+            line-height: 1.0;
+            orphans: 2;
+            widows: 2;
+            text-align: left;
+            height: 12pt;
+            font-family: "Arial";
+        }
+
+        .c2 {
+            background-color: #ffffff;
+            padding-top: 0pt;
+            padding-bottom: 0pt;
+            line-height: 1.0;
+            orphans: 2;
+            widows: 2;
+            text-align: left;
+            font-family: "Arial";
+        }
+
+        .c9 {
+            color: #000000;
+            font-weight: 400;
+            text-decoration: none;
+            vertical-align: baseline;
+            font-size: 10pt;
+            font-family: "Arial";
+            font-style: normal
+        }
+
+        .c12 {
+            color: #ffffff;
+            font-weight: 700;
+            text-decoration: none;
+            vertical-align: baseline;
+            font-size: 11pt;
+            font-family: "Arial";
+            font-style: normal
+        }
+
+        .c7 {
+            color: #000000;
+            font-weight: 400;
+            text-decoration: none;
+            vertical-align: baseline;
+            font-size: 11pt;
+            font-family: "Arial";
+            font-style: normal
+        }
+
+        .c4 {
+            color: #000000;
+            font-weight: 400;
+            text-decoration: none;
+            vertical-align: baseline;
+            font-size: 12pt;
+            font-family: "Arial";
+            font-style: normal
+        }
+
+        .c0 {
+            color: #000000;
+            font-weight: 400;
+            text-decoration: none;
+            vertical-align: baseline;
+            font-size: 16pt;
+            font-family: "Arial";
+            font-style: normal
+        }
+
+        .c3 {
+            padding-top: 0pt;
+            padding-bottom: 0pt;
+            line-height: 1.0;
+            orphans: 2;
+            widows: 2;
+            text-align: left;
+            font-family: "Arial";
+        }
+
+        .c10 {
+            font-size: 16pt;
+            font-family: "Arial";
+            font-weight: 700;
+        }
+
+        .c13 {
+            background-color: #ffffff;
+            /* max-width: 468pt; */
+            padding: 20px 20px 20px 20px;
+            font-family: "Arial";
+        }
+
+        .c11 {
+            background-color: #003057;
+            font-family: "Arial";
+        }
+
+        .c6 {
+            height: 12pt;
+            font-family: "Arial";
+        }
+
+        p {
+            margin: 0;
+            color: #000000;
+            font-size: 12pt;
+            font-family: "Arial";
+        }
+        footer {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            padding: 20px 20px 20px 20px;
+            font-family: "Arial";
+        }
+        .column90 {
+            width: 90%;
+            float: left;
+        }
+        .column10 {
+            text-align: right;
+            width: 10%;
+            float: left;
+        }
+
+    </style>
+</head>
+
+<body class="c13 doc-content">
+    <div class="column90">
+        <p class="c3"><span class="c10">Backtester Overview</span></p>
+        <p class="c8"><span class="c4"></span>GTSF Investments Committee | {{ date }}</span></p>
+        <p class="c3"><span class="c4">Name, Quantitative Analyst</span></p>
+    </div>
+    <div class="column10">
+        <img src="{{ path }}/gtsf_logo.png" alt="GTSF Logo" style="width: 81.07px; height: 81.03px; margin-left: -0.00px; margin-top: -14.90px; transform: rotate(0.00rad) translateZ(0px); -webkit-transform: rotate(0.00rad) translateZ(0px);">
+    </div>
+    <br><br><br><br>
+    <div>
+        <p class="c3 c6"><span class="c4"></span></p>
+        <p class="c3 c11"><span class="c12">Strategy Performance Against SPY</span></p>
+        <img src="{{ path }}example_plot.png" alt="Example Plot Alt Text">
+        <p class="c1"><span class="c7"></span></p>
+        <p class="c3 c11"><span class="c12">Strategy Indicators</span></p>
+        <p class="c1"><span class="c7"></span></p>
+        <p class="c1"><span class="c7">Cumulative Returns: {{ cumulative_returns }}</span></p>
+        <p class="c1"><span class="c7">CAGR: {{ cagr }}</span></p>
+        <p class="c1"><span class="c7">Beta: {{ beta }}</span></p>
+        <p class="c1"><span class="c7">Correlation: {{ correlation }}</span></p>
+        <p class="c1"><span class="c7">Strategy Sharpe {{ strategy_sharpe }} | SPY Sharpe {{ spy_sharpe }}</span></p>
+        <p class="c1"><span class="c7">Strategy Vol: {{ strategy_vol }} | SPY Vol: {{ spy_vol }}</span></p>
+    </div>
+    <br>
+
+    <footer>
+    <div>
+        <p class="c8"><span class="c4">Contact Information</span></p>
+        <p class="c3"><span class="c9">Name, Director of Quantitative</span></p>
+        <p class="c3"><span class="c9">email@gatech.edu</span></p>
+    </div>
+    </footer>
+</body>
+
+</html>
