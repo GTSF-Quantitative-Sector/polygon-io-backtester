@@ -13,7 +13,7 @@ This project requires `wkhtmltopdf` to generate the PDF report.
 ### Ubuntu
 ```sudo apt-get install wkhtmltopdf```
 ### Windows
-In case you’re on Windows, you can download the installer [here](https://wkhtmltopdf.org/downloads.html).
+In case you’re on Windows, you can download the installer [here](https://wkhtmltopdf.org/downloads.html). Then, after installation, add the wkhtmltopdf binary to your PATH.
 
 
 ## PDF Generation
