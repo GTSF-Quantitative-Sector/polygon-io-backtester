@@ -1,33 +1,36 @@
 import asyncio
+import os
 from datetime import date, datetime
+from pathlib import Path
+from sys import platform
 from typing import List, Tuple, cast
 
+import jinja2
 import matplotlib.pyplot as plt
 import pandas as pd
+import pdfkit
 
 from . import async_polygon
 from .config import KEY
 from .models import TradeTimeSlice
 
-import jinja2
-import pdfkit
-
-import os
-from sys import platform
 
 class Report:
-    def __init__(self, timeslices: List[TradeTimeSlice]) -> None:
+    def __init__(self, timeslices: List[TradeTimeSlice], period_months: int) -> None:
         self.timeslices = timeslices
         self.portfolio_values = asyncio.run(self.get_portfolio_values_vs_spy())
+        self.period_months = period_months
 
-    def to_pdf(self, path: str = "") -> None:
+    def to_pdf(self) -> None:
         """Export report in pdf form"""
 
-        # Get the path to the working directory
-        path_to_directory = os.path.dirname(os.path.abspath(__name__))
-        # Add a \ if windows, else add /
-        path_to_directory += "\\" if platform == "win32" else "/"
-
+        # establish temporary directory and export plot
+        static_directory = Path(__file__).parent / "static"
+        temp_directory = static_directory / "temp"
+        if  not temp_directory.is_dir():
+            os.mkdir(temp_directory)
+        self.export_plot(str(temp_directory / "plot.png"))
+        
         strategy_sharpe, spy_sharpe = self.calculate_annualized_sharpe_ratio()
         strategy_vol, spy_vol = self.calculate_volatility()
         context = {
@@ -40,18 +43,24 @@ class Report:
             "spy_sharpe": f"{spy_sharpe:.5f}",
             "strategy_vol": f"{strategy_vol:.5f}",
             "spy_vol": f"{spy_vol:.5f}",
-            "path": path_to_directory,
-            "date": str(datetime.now().strftime("%b %d, %Y")),
+            "path": static_directory,
+            "date": datetime.now().strftime("%b %d, %Y"),
+            "period": self.period_months
         }
 
         # Create an environment for out template and export the PDF
-        template_loader = jinja2.FileSystemLoader("./")
+        template_dir = Path(__file__).parent / "templates"
+        template_loader = jinja2.FileSystemLoader(template_dir)
         template_env = jinja2.Environment(loader=template_loader)
         template = template_env.get_template("report-template.html")
         output_text = template.render(context)
-
-        # config = pdfkit.configuration(wkhtmltopdf='/usr/local/bin/wkhtmltopdf')
         pdfkit.from_string(output_text, 'report.pdf', options={"enable-local-file-access": ""})
+
+        # cleanup temp files
+        for file in os.listdir(temp_directory):
+            os.remove(os.path.join(temp_directory, file))
+        os.rmdir(temp_directory)
+
 
     def print_stats(self) -> None:
         """Print report in text form"""
@@ -67,11 +76,13 @@ class Report:
 
     def show_plot(self) -> None:
         self.portfolio_values.plot.line()
+        plt.xticks(rotation=45, ha="right")
         plt.show()
 
-    def export_plot(self) -> None:
+    def export_plot(self, path: str) -> None:
         self.portfolio_values.plot.line()
-        plt.savefig("plot.png", bbox_inches="tight")
+        plt.xticks(rotation=45, ha="right")
+        plt.savefig(path, bbox_inches="tight")
 
     def calculate_beta(self) -> float:
         weekly_returns = self.portfolio_values.iloc[::5, :].pct_change(periods=1)[1:]

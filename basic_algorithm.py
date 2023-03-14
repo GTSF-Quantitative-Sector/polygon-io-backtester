@@ -23,6 +23,4 @@ if __name__ == "__main__":
     algo = BasicAlgorithm(tickers_and_sectors)
     report = algo.backtest(36)
     report.print_stats()
-    report.export_plot()
-    # report.show_plot()
     report.to_pdf()
