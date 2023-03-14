@@ -46,7 +46,7 @@ class Algorithm:
             List[float]: percentage of initial capital at each timestep
         """
 
-        return Report(asyncio.run(self._backtest(months_back)))
+        return Report(asyncio.run(self._backtest(months_back)), months_back)
 
     async def select_tickers(
         self, ticker_dates: List[TickerDate]
